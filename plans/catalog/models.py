@@ -26,4 +26,4 @@ class Element(models.Model):
 
     def __str__(self):
         """String for representing the Element object."""
-        return self.axis_id
+        return self.plan

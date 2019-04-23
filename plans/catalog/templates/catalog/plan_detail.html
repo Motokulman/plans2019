@@ -3,8 +3,9 @@
 {% block content %}
   <h1>Title: {{ plan.title }}</h1>
   <a href="{% url 'plan_delete' plan.id %}">Delete this plan</a>
+  <a href="{% url 'edit-scheme' plan.id %}">Edit scheme of this plan</a>
 
-  <div style="margin-left:20px;margin-top:20px">
+  <!-- <div style="margin-left:20px;margin-top:20px">
 
-  </div>
+  </div> -->
 {% endblock %}
