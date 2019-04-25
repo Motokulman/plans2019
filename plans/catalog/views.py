@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import permission_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, JsonResponse
+from django.core import serializers
 
 
 def index(request):
@@ -56,15 +57,27 @@ def edit_scheme(request, pk):
 
 
 def add_element(request):
+    """View function for add single element (line) of the scheme of the specific plan"""
     return_dict = dict()
     # session_key = request.session.session_key
     data = request.POST
     plan = get_object_or_404(Plan, pk=data.get("plan"))
 
-
-    print (data)
+    # print(data)
     e = Element(plan=plan, x0=data.get("x0"), y0=data.get(
         "y0"), x1=data.get("x1"), y1=data.get("y1"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)
+
+
+def get_elements(request):
+    """View function for getting all existed elements (lines) of the scheme of the specific plan"""
+
+    data = request.GET
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+
+    v = Element.objects.filter(plan=plan)
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)

@@ -2,7 +2,6 @@
 
 {% block content %}
 <h1>Plan: {{ plan_title }}</h1>
-<p>Plan id: {{ plan_id}}</p>
 
 <form id="canvas_form" action="{% url 'add_element' %}" name="{{ plan_id}}" method="POST">
     {% csrf_token %}
