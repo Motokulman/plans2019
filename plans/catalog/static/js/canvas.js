@@ -71,7 +71,8 @@ canvas.addEventListener('mousemove', function (e) {
   ctx.lineCap = 'square';
   if (running) {
     clear();
-    mousePos = getMousePos(canvas, e);
+    //mousePos = getMousePos(canvas, e);
+    stickGrid(canvas, e);
     drawExisted(existedElements);
     elementLine.draw();
   }
@@ -93,7 +94,6 @@ canvas.addEventListener('click', function (e) {
     data.plan = plan_id;
     data["csrfmiddlewaretoken"] = csrf_token;
     var url = '/catalog/add_element/';
-    console.log('data = ', data);
     $.ajax({
       url: url,
       type: 'POST',
@@ -119,3 +119,16 @@ function getMousePos(canvas, e) {
   };
 }
 
+// Sticking to grid
+var stickPixels = 3;
+function stickGrid(canvas, e) {
+  mousePos = getMousePos(canvas, e);
+  if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
+    mousePos.x = mouseOldPos.x;
+    console.log("mousePos.x = ", mousePos.x);
+  }
+  if (Math.abs(mousePos.y - mouseOldPos.y) <= stickPixels) {
+    mousePos.y = mouseOldPos.y;
+    console.log("mousePos.y = ", mousePos.y);
+  }
+}
