@@ -4,12 +4,16 @@ var mouseOldPos;
 var mousePos;
 var existedElements;
 var elementsLoadedEvent = new Event('loaded'); // event when ajax returns data
+var elementLineWidth = 3;
+var guideLineWidth = 1;
 
+ctx.lineCap = 'square';
 
 // drawing existed elements. 
 function drawExisted(data) {
   var elements = JSON.parse(data);
   for (item of elements.values()) {
+    ctx.lineWidth = elementLineWidth;
     ctx.beginPath();
     ctx.moveTo(item.fields.x0, item.fields.y0);
     ctx.lineTo(item.fields.x1, item.fields.y1);
@@ -67,20 +71,21 @@ function clear() {
 }
 
 canvas.addEventListener('mousemove', function (e) {
-  ctx.lineWidth = 10.0;
-  ctx.lineCap = 'square';
   if (running) {
     clear();
-    //mousePos = getMousePos(canvas, e);
-    stickGrid(canvas, e);
+    sticking(canvas, e, existedElements);
     drawExisted(existedElements);
     elementLine.draw();
+  } else {
+    clear();
+    sticking(canvas, e, existedElements);
+    drawExisted(existedElements);
   }
 });
 
 canvas.addEventListener('click', function (e) {
   if (!running) {
-    mouseOldPos = getMousePos(canvas, e);
+    mouseOldPos = mousePos;
     running = true;
   } else {
     running = false;
@@ -89,6 +94,8 @@ canvas.addEventListener('click', function (e) {
     data.y0 = mouseOldPos.y;
     data.x1 = mousePos.x;
     data.y1 = mousePos.y;
+    //data.x2 = Math.abs(Math.round(mousePos.x - mouseOldPos.x));
+    //data.y2 = Math.abs(Math.round(mousePos.y - mouseOldPos.y));
     var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
     var plan_id = document.getElementById('canvas_form').name;
     data.plan = plan_id;
@@ -101,13 +108,14 @@ canvas.addEventListener('click', function (e) {
       cache: true,
       success: function (data) {
         console.log("POST OK");
+        getExisted();
+        drawExisted(existedElements);
       },
       error: function () {
         console.log("POST error");
       }
     });
-    getExisted();
-    drawExisted(existedElements);
+
   }
 });
 
@@ -119,16 +127,61 @@ function getMousePos(canvas, e) {
   };
 }
 
-// Sticking to grid
+// Sticking
 var stickPixels = 3;
-function stickGrid(canvas, e) {
+function sticking(canvas, e, data) {
   mousePos = getMousePos(canvas, e);
+  var flagX = false;
+  var flagY = false;
+  // Sticking to horizont and vertical
   if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
     mousePos.x = mouseOldPos.x;
-    console.log("mousePos.x = ", mousePos.x);
+    flagX = true;
   }
   if (Math.abs(mousePos.y - mouseOldPos.y) <= stickPixels) {
     mousePos.y = mouseOldPos.y;
-    console.log("mousePos.y = ", mousePos.y);
+    flagY = true;
   }
+  // Sticking to other points
+  var elements = JSON.parse(data);
+  for (item of elements.values()) {
+    if (Math.abs(mousePos.x - item.fields.x0) <= stickPixels) {
+      mousePos.x = item.fields.x0;
+      flagX = true;
+    } else if (Math.abs(mousePos.x - item.fields.x1) <= stickPixels) {
+      mousePos.x = item.fields.x1;
+      flagX = true;
+    }
+    if (Math.abs(mousePos.y - item.fields.y0) <= stickPixels) {
+      mousePos.y = item.fields.y0;
+      flagY = true;
+    } else if (Math.abs(mousePos.y - item.fields.y1) <= stickPixels) {
+      mousePos.y = item.fields.y1;
+      flagY = true;
+    }
+  }
+  // draw guidelines
+  if (flagX || flagY) {
+    ctx.lineWidth = guideLineWidth;
+    ctx.setLineDash([10, 5]);
+    ctx.lineWidth = 1;
+    if (flagX) {
+      ctx.beginPath();
+      ctx.moveTo(mousePos.x, 0);
+      ctx.lineTo(mousePos.x, canvas.height);
+      ctx.stroke();
+    }
+    if (flagY) {
+      ctx.beginPath();
+      ctx.moveTo(0, mousePos.y);
+      ctx.lineTo(canvas.width, mousePos.y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([0, 0]);
+  }
+}
+
+// Circling
+function circling () {
+
 }

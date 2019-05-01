@@ -23,7 +23,10 @@ class Element(models.Model):
     y0 = models.IntegerField()
     x1 = models.IntegerField()
     y1 = models.IntegerField()
+    #y2 = models.IntegerField()  # center of circus
+    #y2 = models.IntegerField()  # center of circus
 
     def __str__(self):
         """String for representing the Element object."""
         return self.plan
+
