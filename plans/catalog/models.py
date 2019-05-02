@@ -17,14 +17,14 @@ class Plan(models.Model):
 
 class Element(models.Model):
     """Element - it's wall or smth else on the axis. Between axises"""
-    plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, null=True)
+    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
     # axis_id = models.IntegerField()
     x0 = models.IntegerField()
     y0 = models.IntegerField()
     x1 = models.IntegerField()
     y1 = models.IntegerField()
-    #y2 = models.IntegerField()  # center of circus
-    #y2 = models.IntegerField()  # center of circus
+    x2 = models.IntegerField()  # center of circus
+    y2 = models.IntegerField()  # center of circus
 
     def __str__(self):
         """String for representing the Element object."""

@@ -2,8 +2,8 @@
 
 {% block content %}
   <h1>Plan List</h1>
-  {% if plan_list %}
   <a href="{% url 'plan_create' %}">Create new plan</a>
+  {% if plan_list %}
   <ul>
     {% for plan in plan_list %}
       <li>

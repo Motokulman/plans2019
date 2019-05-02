@@ -65,7 +65,7 @@ def add_element(request):
 
     # print(data)
     e = Element(plan=plan, x0=data.get("x0"), y0=data.get(
-        "y0"), x1=data.get("x1"), y1=data.get("y1"))
+        "y0"), x1=data.get("x1"), y1=data.get("y1"), x2=data.get("x2"), y2=data.get("y2"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)

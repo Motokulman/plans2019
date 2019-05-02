@@ -94,8 +94,8 @@ canvas.addEventListener('click', function (e) {
     data.y0 = mouseOldPos.y;
     data.x1 = mousePos.x;
     data.y1 = mousePos.y;
-    //data.x2 = Math.abs(Math.round(mousePos.x - mouseOldPos.x));
-    //data.y2 = Math.abs(Math.round(mousePos.y - mouseOldPos.y));
+    data.x2 = Math.round((Math.max(mousePos.x, mouseOldPos.x) - Math.min(mousePos.x, mouseOldPos.x)) / 2) + Math.min(mousePos.x, mouseOldPos.x);
+    data.y2 = Math.round((Math.max(mousePos.y, mouseOldPos.y) - Math.min(mousePos.y, mouseOldPos.y)) / 2) + Math.min(mousePos.y, mouseOldPos.y);
     var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
     var plan_id = document.getElementById('canvas_form').name;
     data.plan = plan_id;
@@ -133,6 +133,8 @@ function sticking(canvas, e, data) {
   mousePos = getMousePos(canvas, e);
   var flagX = false;
   var flagY = false;
+  var flagCX = false;
+  var flagCY = false;
   // Sticking to horizont and vertical
   if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
     mousePos.x = mouseOldPos.x;
@@ -159,19 +161,34 @@ function sticking(canvas, e, data) {
       mousePos.y = item.fields.y1;
       flagY = true;
     }
+    // is it center
+    console.log("mousePos.x = ", mousePos.x);
+    console.log("item.fields.x2 = ", item.fields.x2);
+    console.log("item.fields.x1 = ", item.fields.x1);
+    console.log("Math.abs(mousePos.x - item.fields.x2) = ", Math.abs(mousePos.x - item.fields.x2));
+    if ((Math.abs(mousePos.x - item.fields.x2) <= stickPixels) && (item.fields.x2 != item.fields.x0)) {
+      mousePos.x = item.fields.x2;
+      flagCX = true;
+      console.log("flagCX = true");
+    }
+    if ((Math.abs(mousePos.y - item.fields.y2) <= stickPixels) && (item.fields.y2 != item.fields.y0)) {
+      mousePos.y = item.fields.y2;
+      flagCY = true;
+      console.log("flagCY = true");
+    }
   }
   // draw guidelines
-  if (flagX || flagY) {
+  if (flagX || flagY || flagCX) {
     ctx.lineWidth = guideLineWidth;
     ctx.setLineDash([10, 5]);
     ctx.lineWidth = 1;
-    if (flagX) {
+    if (flagX || flagCX) {
       ctx.beginPath();
       ctx.moveTo(mousePos.x, 0);
       ctx.lineTo(mousePos.x, canvas.height);
       ctx.stroke();
     }
-    if (flagY) {
+    if (flagY || flagCY) {
       ctx.beginPath();
       ctx.moveTo(0, mousePos.y);
       ctx.lineTo(canvas.width, mousePos.y);
@@ -182,6 +199,6 @@ function sticking(canvas, e, data) {
 }
 
 // Circling
-function circling () {
+function circling() {
 
 }
