@@ -3,21 +3,28 @@
 {% block content %}
 <h1>Plan: {{ plan_title }}</h1>
 
-<form id="canvas_form" action="{% url 'add_element' %}" name="{{ plan_id}}" method="POST">
-    {% csrf_token %}
-    <canvas id="canvas" style="border: 1px solid" width="1000" height="700"></canvas>
-</form>
+
+
+
+
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-8">
+      <form id="canvas_form" action="{% url 'add_element' %}" name="{{ plan_id}}" method="POST">
+        {% csrf_token %}
+        <canvas id="canvas" style="border: 1px solid" width="1000" height="700"></canvas>
+      </form>
+    </div>
+    <div class="col-sm-2">
+      <div id="selector" class="btn-group">
+        <button id="wall" type="button" class="btn btn-light">Wall</button>
+        <!-- <button id="wall_b" type="button" class="btn btn-light">Wall B type</button> -->
+      </div>
+    </div>
+  </div>
+</div>
+
 {% load static %}
 <script type="text/javascript" src="{% static 'js/canvas.js' %}"></script>
-
-
-<!-- <p{% if book_instance.is_overdue %} class="text-danger"{% endif %}>Due date: {{ book_instance.due_back }}</p>
-    
-  <form action="" method="post">
-    {% csrf_token %}
-    <table>
-    {{ form.as_table }}
-    </table>
-    <input type="submit" value="Submit">
-  </form> -->
 {% endblock %}

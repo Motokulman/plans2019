@@ -6,6 +6,8 @@ var existedElements;
 var elementsLoadedEvent = new Event('loaded'); // event when ajax returns data
 var elementLineWidth = 3;
 var guideLineWidth = 1;
+var selectedTool;
+
 
 ctx.lineCap = 'square';
 
@@ -84,40 +86,42 @@ canvas.addEventListener('mousemove', function (e) {
 });
 
 canvas.addEventListener('click', function (e) {
-  if (!running) {
-    mouseOldPos = mousePos;
-    running = true;
-  } else {
-    running = false;
-    var data = {};
-    data.x0 = mouseOldPos.x;
-    data.y0 = mouseOldPos.y;
-    data.x1 = mousePos.x;
-    data.y1 = mousePos.y;
-    data.x2 = Math.round((Math.max(mousePos.x, mouseOldPos.x) - Math.min(mousePos.x, mouseOldPos.x)) / 2) + Math.min(mousePos.x, mouseOldPos.x);
-    data.y2 = Math.round((Math.max(mousePos.y, mouseOldPos.y) - Math.min(mousePos.y, mouseOldPos.y)) / 2) + Math.min(mousePos.y, mouseOldPos.y);
-    var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
-    var plan_id = document.getElementById('canvas_form').name;
-    data.plan = plan_id;
-    data["csrfmiddlewaretoken"] = csrf_token;
-    var url = '/catalog/add_element/';
-    $.ajax({
-      url: url,
-      type: 'POST',
-      data: data,
-      cache: true,
-      success: function (data) {
-        console.log("POST OK");
-        getExisted();
-        drawExisted(existedElements);
-      },
-      error: function () {
-        console.log("POST error");
-      }
-    });
-
+  if (selectedTool == "wall") {
+    if (!running) {
+      mouseOldPos = mousePos;
+      running = true;
+    } else {
+      running = false;
+      var data = {};
+      data.x0 = mouseOldPos.x;
+      data.y0 = mouseOldPos.y;
+      data.x1 = mousePos.x;
+      data.y1 = mousePos.y;
+      data.x2 = Math.round((Math.max(mousePos.x, mouseOldPos.x) - Math.min(mousePos.x, mouseOldPos.x)) / 2) + Math.min(mousePos.x, mouseOldPos.x);
+      data.y2 = Math.round((Math.max(mousePos.y, mouseOldPos.y) - Math.min(mousePos.y, mouseOldPos.y)) / 2) + Math.min(mousePos.y, mouseOldPos.y);
+      var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
+      var plan_id = document.getElementById('canvas_form').name;
+      data.plan = plan_id;
+      data["csrfmiddlewaretoken"] = csrf_token;
+      var url = '/catalog/add_element/';
+      $.ajax({
+        url: url,
+        type: 'POST',
+        data: data,
+        cache: true,
+        success: function (data) {
+          console.log("POST OK");
+          getExisted();
+          drawExisted(existedElements);
+        },
+        error: function () {
+          console.log("POST error");
+        }
+      });
+    }
   }
 });
+
 
 function getMousePos(canvas, e) {
   var rect = canvas.getBoundingClientRect();
@@ -136,13 +140,15 @@ function sticking(canvas, e, data) {
   var flagCX = false;
   var flagCY = false;
   // Sticking to horizont and vertical
-  if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
-    mousePos.x = mouseOldPos.x;
-    flagX = true;
-  }
-  if (Math.abs(mousePos.y - mouseOldPos.y) <= stickPixels) {
-    mousePos.y = mouseOldPos.y;
-    flagY = true;
+  if (running) {
+    if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
+      mousePos.x = mouseOldPos.x;
+      flagX = true;
+    }
+    if (Math.abs(mousePos.y - mouseOldPos.y) <= stickPixels) {
+      mousePos.y = mouseOldPos.y;
+      flagY = true;
+    }
   }
   // Sticking to other points
   var elements = JSON.parse(data);
@@ -162,19 +168,13 @@ function sticking(canvas, e, data) {
       flagY = true;
     }
     // is it center
-    console.log("mousePos.x = ", mousePos.x);
-    console.log("item.fields.x2 = ", item.fields.x2);
-    console.log("item.fields.x1 = ", item.fields.x1);
-    console.log("Math.abs(mousePos.x - item.fields.x2) = ", Math.abs(mousePos.x - item.fields.x2));
     if ((Math.abs(mousePos.x - item.fields.x2) <= stickPixels) && (item.fields.x2 != item.fields.x0)) {
       mousePos.x = item.fields.x2;
       flagCX = true;
-      console.log("flagCX = true");
     }
     if ((Math.abs(mousePos.y - item.fields.y2) <= stickPixels) && (item.fields.y2 != item.fields.y0)) {
       mousePos.y = item.fields.y2;
       flagCY = true;
-      console.log("flagCY = true");
     }
   }
   // draw guidelines
@@ -198,7 +198,11 @@ function sticking(canvas, e, data) {
   }
 }
 
-// Circling
-function circling() {
 
-}
+// Handling selected tool
+$('#selector button').click(function () {
+  $(this).addClass('active').siblings().removeClass('active');
+  if (this.id == "wall") {
+    selectedTool = "wall";
+  }
+});
