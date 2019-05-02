@@ -137,8 +137,8 @@ function sticking(canvas, e, data) {
   mousePos = getMousePos(canvas, e);
   var flagX = false;
   var flagY = false;
-  var flagCX = false;
-  var flagCY = false;
+  // var flagCX = false;
+  // var flagCY = false;
   // Sticking to horizont and vertical
   if (running) {
     if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
@@ -168,27 +168,27 @@ function sticking(canvas, e, data) {
       flagY = true;
     }
     // is it center
-    if ((Math.abs(mousePos.x - item.fields.x2) <= stickPixels) && (item.fields.x2 != item.fields.x0)) {
-      mousePos.x = item.fields.x2;
-      flagCX = true;
-    }
-    if ((Math.abs(mousePos.y - item.fields.y2) <= stickPixels) && (item.fields.y2 != item.fields.y0)) {
-      mousePos.y = item.fields.y2;
-      flagCY = true;
-    }
+    // if ((Math.abs(mousePos.x - item.fields.x2) <= stickPixels) && (item.fields.x2 != item.fields.x0)) {
+    //   mousePos.x = item.fields.x2;
+    //   flagCX = true;
+    // }
+    // if ((Math.abs(mousePos.y - item.fields.y2) <= stickPixels) && (item.fields.y2 != item.fields.y0)) {
+    //   mousePos.y = item.fields.y2;
+    //   flagCY = true;
+    // }
   }
   // draw guidelines
-  if (flagX || flagY || flagCX) {
+  if (flagX || flagY) {
     ctx.lineWidth = guideLineWidth;
     ctx.setLineDash([10, 5]);
     ctx.lineWidth = 1;
-    if (flagX || flagCX) {
+    if (flagX) {
       ctx.beginPath();
       ctx.moveTo(mousePos.x, 0);
       ctx.lineTo(mousePos.x, canvas.height);
       ctx.stroke();
     }
-    if (flagY || flagCY) {
+    if (flagY) {
       ctx.beginPath();
       ctx.moveTo(0, mousePos.y);
       ctx.lineTo(canvas.width, mousePos.y);
