@@ -81,3 +81,13 @@ def get_elements(request):
     d = serializers.serialize('json', v)
 
     return JsonResponse(d, safe=False)
+
+
+def get_plan(request):
+    """View function for getting all information of the specific plan"""
+
+    data = request.GET
+    v = Plan.objects.filter(pk=data.get("plan"))
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)

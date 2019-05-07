@@ -13,8 +13,7 @@ ctx.lineCap = 'square';
 
 // drawing existed elements. 
 function drawExisted(data) {
-  var elements = JSON.parse(data);
-  for (item of elements.values()) {
+  for (item of data.values()) {
     ctx.lineWidth = elementLineWidth;
     ctx.beginPath();
     ctx.moveTo(item.fields.x0, item.fields.y0);
@@ -24,7 +23,7 @@ function drawExisted(data) {
 }
 
 // get existing elements from DB
-function getExisted() {
+function getElements() {
   var data = {};
   var plan_id = document.getElementById('canvas_form').name;
   data.plan = plan_id;
@@ -35,7 +34,7 @@ function getExisted() {
     data: data,
     cache: true,
     success: function (data) {
-      existedElements = data;
+      existedElements = JSON.parse(data);
       console.log("OK Getting stored elements");
       //raise event when the reqiest recieved and we can draw existed elements
       document.dispatchEvent(elementsLoadedEvent);
@@ -44,12 +43,36 @@ function getExisted() {
       console.log("Getting stored elements error");
     }
   });
+}
 
+// get current plan info from DB - padding, scaling
+function getPlan() {
+  var data = {};
+  var plan_id = document.getElementById('canvas_form').name;
+  data.plan = plan_id;
+  var url = '/catalog/get_plan/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    success: function (data) {
+      plan = JSON.parse(data);
+      console.log("plan = ", plan);
+      console.log("Getting plan Ok");
+      //raise event when the reqiest recieved and we can draw existed elements
+      // document.dispatchEvent(elementsLoadedEvent);
+    },
+    error: function () {
+      console.log("Getting plan error");
+    }
+  });
 }
 
 // getting existing elements when just open scheme
 $(document).ready(function () {
-  getExisted();
+  getElements();
+  getPlan();
 });
 
 // draw existed elements when GET request returned saved elements
@@ -93,7 +116,12 @@ canvas.addEventListener('click', function (e) {
     } else {
       running = false;
       var data = {};
-      data.x0 = mouseOldPos.x;
+   //   if (mousePos.x > existedElements.)
+
+
+
+
+        data.x0 = mouseOldPos.x;
       data.y0 = mouseOldPos.y;
       data.x1 = mousePos.x;
       data.y1 = mousePos.y;
@@ -111,7 +139,7 @@ canvas.addEventListener('click', function (e) {
         cache: true,
         success: function (data) {
           console.log("POST OK");
-          getExisted();
+          getElements();
           drawExisted(existedElements);
         },
         error: function () {
@@ -151,8 +179,7 @@ function sticking(canvas, e, data) {
     }
   }
   // Sticking to other points
-  var elements = JSON.parse(data);
-  for (item of elements.values()) {
+  for (item of existedElements.values()) {
     if (Math.abs(mousePos.x - item.fields.x0) <= stickPixels) {
       mousePos.x = item.fields.x0;
       flagX = true;

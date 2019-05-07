@@ -21,4 +21,5 @@ urlpatterns += [
          name='edit-scheme'),
     path('add_element/', views.add_element, name='add_element'),
     path('get_elements/', views.get_elements, name='get_elements'),
+    path('get_plan/', views.get_plan, name='get_plan'),
 ]
