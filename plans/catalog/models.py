@@ -5,9 +5,9 @@ from django.urls import reverse
 class Plan(models.Model):
     """Model representing a plan"""
     title = models.CharField(max_length=200)
-    #paddingX = models.IntegerField()
-    #paddingY = models.IntegerField()
-    #scale = models.FloatField()
+    paddingX = models.IntegerField(null=True, blank=True)
+    paddingY = models.IntegerField(null=True, blank=True)
+    scale = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         """String for representing the Plan object."""

@@ -3,3 +3,15 @@
     padding: 0;
     list-style: none;
 }
+.edit-field {
+    position: relative; /* Относительное позиционирование */
+    background: #f0f0f0; /* Цвет фона */
+    height: 800px; /* Высота блока */
+   }
+   
+.canvas-field {
+    top: 50px;
+    /* bottom: 15px; Положение от нижнего края */
+    left: 80px; /* Положение от левого края */
+    position: relative; /* Относительное позиционирование */
+   }

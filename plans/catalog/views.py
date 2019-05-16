@@ -32,7 +32,7 @@ class PlanDetailView(generic.DetailView):
 class PlanCreate(CreateView):
     model = Plan
     fields = '__all__'
-    initial = {'title': 'New plan'}
+    initial = {'title': 'New plan', 'scale': '1.0'}
 
 
 class PlanDelete(DeleteView):
@@ -91,3 +91,54 @@ def get_plan(request):
     d = serializers.serialize('json', v)
 
     return JsonResponse(d, safe=False)
+
+
+def set_plan_paddingX(request):
+    """View function for edit plan info"""
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(Plan, pk=data.get("plan"))
+    e.paddingX = data.get("paddingX")
+    e.save()
+
+    return JsonResponse(return_dict)
+
+
+def set_plan_paddingY(request):
+    """View function for edit plan info"""
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(Plan, pk=data.get("plan"))
+    e.paddingY = data.get("paddingY")
+    e.save()
+
+    return JsonResponse(return_dict)
+
+
+def set_element_x(request):
+    """View function for change single x coords of element (line) of the scheme of the specific plan"""
+    return_dict = dict()
+    data = request.POST
+    # e = get_object_or_404(Element, id=id)
+    e = get_object_or_404(Element, pk=data.get("pk"))
+    # e.paddingY = 10
+    # print("asdads")
+    e.x0 = data.get("x0")
+    e.x1 = data.get("x1")
+    e.x2 = data.get("x2")
+    e.save()
+
+    return JsonResponse(return_dict)
+
+
+def set_element_y(request):
+    """View function for change single y coords of element (line) of the scheme of the specific plan"""
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(Element, pk=data.get("pk"))
+    e.y0 = data.get("y0")
+    e.y1 = data.get("y1")
+    e.y2 = data.get("y2")
+    e.save()
+
+    return JsonResponse(return_dict)

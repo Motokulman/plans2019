@@ -22,4 +22,8 @@ urlpatterns += [
     path('add_element/', views.add_element, name='add_element'),
     path('get_elements/', views.get_elements, name='get_elements'),
     path('get_plan/', views.get_plan, name='get_plan'),
+    path('set_plan_paddingX/', views.set_plan_paddingX, name='set_plan_paddingX'),
+    path('set_plan_paddingY/', views.set_plan_paddingY, name='set_plan_paddingY'),
+    path('set_element_x/', views.set_element_x, name='set_element_x'),
+    path('set_element_y/', views.set_element_y, name='set_element_y'),
 ]
