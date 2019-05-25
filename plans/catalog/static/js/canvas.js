@@ -13,6 +13,22 @@ var plan_id = document.getElementById('canvas_form').name;
 var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
 var paddingX;
 var paddingY;
+var canvasDiv = document.getElementById("canvas_form");
+var editDiv = document.getElementById("edit-field");
+// var topEditField = document.getElementById("top-edit-field");
+var leftEditField = document.getElementById("left-edit-field");
+// var rightEditField = document.getElementById("right-edit-field");
+// var bottomEditField = document.getElementById("bottom-edit-field");
+var canvasPaddingTop = canvasDiv.getBoundingClientRect().top - editDiv.getBoundingClientRect().top;
+var canvasPaddingLeft = canvasDiv.getBoundingClientRect().left - editDiv.getBoundingClientRect().left;
+var yShift = canvas.height + 20 - canvasPaddingTop; // canvas.height + bootstrap paddings - canvas.style.top
+var data = {};
+var dataPlan = {};
+var url;
+// settings for size inputs
+var sizeInputWidth = 60;
+var sizeInputHeight = 20;
+var sizeOld; // for detecting if the size in input field was really changed instead blind sending to server
 
 
 ctx.lineCap = 'square';
@@ -25,6 +41,7 @@ function drawExisted(data, paddingX, paddingY) {
     ctx.moveTo(item.fields.x0 + paddingX, item.fields.y0 + paddingY);
     ctx.lineTo(item.fields.x1 + paddingX, item.fields.y1 + paddingY);
     ctx.stroke();
+
   }
 }
 
@@ -41,16 +58,168 @@ function getElements() {
     success: function (data) {
       existedElements = JSON.parse(data);
       console.log("OK Getting stored elements");
-      //console.log("data = ", data);
-      //console.log("existedElements = ", existedElements);
       //raise event when the reqiest recieved and we can draw existed elements
       document.dispatchEvent(getElementsEvent);
+      // add an input fields
+      $(".SizeInput").remove();
+      //var i = 0;
+      // let xAxises = new Set();
+      let yAxisesSet = new Set();  // use Set for storing unique sizes only
+      // let xCenters = new Set();
+      // let yCenters = new Set();
+      for (item of existedElements.values()) {
+        // xAxises.add(item.fields.x0);
+        // xAxises.add(item.fields.x1);
+        yAxisesSet.add(item.fields.y0);
+        yAxisesSet.add(item.fields.y1);
+        // if (item.fields.x0 != item.fields.x2) {
+        //   xCenters.add(item.fields.x2);
+        // }
+        // if (item.fields.y0 != item.fields.y2) {
+        //   yCenters.add(item.fields.y2);
+        // }
+      }
+      //transform sets to arrays for sorting
+      let yAxisesArray = Array.from(yAxisesSet);
+      //sorting arrays
+      //first, function for comparing
+      function compareNumeric(a, b) {
+        if (a > b) return 1;
+        if (a < b) return -1;
+      }
+      // now sort
+      yAxisesArray.sort(compareNumeric);
+
+      for (var i = 1; i < yAxisesArray.length; i++) {
+        console.log("item = ", yAxisesArray[i - 1]);
+        var size = yAxisesArray[i] - yAxisesArray[i - 1];
+        addSizeInput(paddingY + yAxisesArray[i - 1] + size / 2 - sizeInputHeight / 2 - (i - 1) * (sizeInputHeight + 4), 10, leftEditField, "left" + String(i - 1), size);  // Y between
+        //set the event listener for changing size
+        var currentInput = document.getElementById("left" + String(i - 1));
+        currentInput.addEventListener("focus", function (e) {
+          sizeOld = this.value;
+          console.log("sizeOld first click= ", sizeOld);
+        });
+        currentInput.addEventListener("blur", function (e) {
+          if ((this.value <= 0) || (this.value > 99999)) { // введено не число
+            //console.log("this.value = ", this.value);
+            this.focus(); //Введено неправильное значение ... и вернуть фокус обратно 
+          } else if (sizeOld != this.value) { // if size was really changed
+            console.log("sizeOld= ", sizeOld);
+            console.log("this.value= ", this.value);
+            var delta = this.value - sizeOld;
+            // find current field's id
+            if (this.id.includes("left")) { // if this left inputs with y sizes between axises
+              var fieldPos = this.id.substr(4); // cut the "left" word and get position of this field
+              var startValue = yAxisesArray[++fieldPos];
+              console.log("startValue = ", startValue);
+              var data = {};
+
+              //  console.log("startValue= ", startValue);
+              // for (var i = fieldPos; i < yAxisesArray.length; i++) {
+                for (var i = 0; i < existedElements.length; i++) {
+                  data.pk = existedElements[i].pk;
+                  data["csrfmiddlewaretoken"] = csrf_token;
+                  data.y0 = existedElements[i].fields.y0;
+                  data.y1 = existedElements[i].fields.y1;
+                  data.y2 = existedElements[i].fields.y2;
+                  var flag = false;
+                  if (existedElements[i].fields.y0 >= startValue) {
+                    data.y0 = existedElements[i].fields.y0 + delta;
+                    flag = true;
+                  }
+                  if (existedElements[i].fields.y1 >= startValue) {
+                    console.log("delta= ", delta);
+                    console.log("startValue= ", startValue);
+                    console.log("existedElements[i].fields.y1= ", existedElements[i].fields.y1);
+                    data.y1 = existedElements[i].fields.y1 + delta;
+                    flag = true;
+                  }
+                  if (existedElements[i].fields.y2 >= startValue) {
+                    data.y2 = existedElements[i].fields.y2 + delta;
+                    flag = true;
+                  }
+
+                  if (flag) { 
+                    var url = '/catalog/set_element_y/';
+                    ajaxPostElement(data, url, "change y coords aftes size changing");
+
+                  }
+
+                
+              }
+              //   if (yAxisesArray[i] == )
+
+
+              // }
+              // console.log("i= ", i);
+            }
+            
+
+          }
+        });
+        // currentInput.addEventListener("click", function (e) {
+        //   alert(currentInput.value);
+        // });
+        // console.log("canvasDiv = ", canvasDiv);
+
+      }
+
+      // for (item of yAxisesArray.values()) {
+      //   addSizeInput(paddingY + item - sizeInputHeight / 2 - i * (sizeInputHeight + 4), 10, leftEditField, item);  // Y between
+      //   console.log("item = ", item);
+      //   i++;
+      // }
     },
     error: function () {
       console.log("Getting stored elements error");
     }
   });
 }
+
+// if size between axises was changed
+function setNewSize() {
+
+}
+
+
+
+
+function addSizeInput(top, left, inputField, id, size) {
+  var elem = document.createElement("input");
+  var topStr = String(top) + "px";
+  var leftStr = String(left) + "px";
+  elem.id = id;
+  elem.className = "SizeInput";
+  elem.type = "number";
+  elem.min = 0;
+  elem.max = 90000;
+  elem.pattern = "[0-9]{0,5}";
+  elem.inputmode = "numeric";
+  elem.maxLength = 5;
+  elem.value = size;
+  console.log("id = ", id);
+  elem.style.top = topStr;
+  elem.style.left = leftStr;
+  elem.style.position = "relative";
+  elem.style.width = String(sizeInputWidth) + "px";
+  elem.style.height = String(sizeInputHeight) + "px";
+  elem.style.webkitAppearance = none;
+  inputField.appendChild(elem);
+}
+
+// .no-spinners {
+//   -moz-appearance:textfield;
+// }
+
+// .no-spinners::-webkit-outer-spin-button,
+// .no-spinners::-webkit-inner-spin-button {
+//   -webkit-appearance: none;
+//   margin: 0;
+// }
+
+
+
 
 // get current plan info from DB - padding, scaling
 function getPlan() {
@@ -67,6 +236,19 @@ function getPlan() {
       plan = JSON.parse(data);
       paddingX = plan[0].fields.paddingX;
       paddingY = plan[0].fields.paddingY;
+      dataPlan = {};
+      dataPlan.plan = plan_id;
+      dataPlan["csrfmiddlewaretoken"] = csrf_token;
+      if (paddingX == null) { // if after first attempt to change paddingX/Y it still null
+        url = '/catalog/set_plan_paddingX/';
+        dataPlan.paddingX = paddingX;
+        ajaxPostPlan(dataPlan, url, "repeat first paddingX");
+      }
+      if (paddingY == null) {
+        url = '/catalog/set_plan_paddingY/';
+        dataPlan.paddingY = paddingY;
+        ajaxPostPlan(dataPlan, url, "repeat first paddingY");
+      }
       //   console.log("plan = ", plan);
       console.log("Getting plan Ok");
       //raise event when the reqiest recieved and we can draw existed elements
@@ -86,7 +268,7 @@ $(document).ready(function () {
 
 // draw existed elements when GET request returned saved elements
 document.addEventListener('getElements', function (e) {
-  if (plan[0].fields.paddingX != null) {
+  if ((plan[0].fields.paddingX != null) && (plan[0].fields.paddingY != null)) {
     drawExisted(existedElements, paddingX, paddingY);
   }
 }, false);
@@ -127,9 +309,8 @@ canvas.addEventListener('click', function (e) {
       mouseOldPos = mousePos;
       running = true;
     } else {
-      var data = {};
-      var dataPlan = {};
-      var url;
+      data = {};
+      dataPlan = {};
       running = false;
       // if it's first line
       if (plan[0].fields.paddingX == null) {
@@ -170,11 +351,7 @@ canvas.addEventListener('click', function (e) {
 
         url = '/catalog/set_plan_paddingX/';
         dataPlan.paddingX = paddingX;
-        // console.log("dataPlan.paddingX = ", dataPlan.paddingX);
         ajaxPostPlan(dataPlan, url, "first paddingX");
-
-        // add input fields
-
 
       } else {
         // check if new line getting smaller paddings
@@ -231,8 +408,8 @@ canvas.addEventListener('click', function (e) {
         data.y0 = mouseOldPos.y - paddingY;
         data.x1 = mousePos.x - paddingX;
         data.y1 = mousePos.y - paddingY;
-        data.x2 = Math.abs(Math.round((data.x1 - data.x0) / 2));
-        data.y2 = Math.abs(Math.round((data.y1 - data.y0) / 2));
+        data.x2 = Math.abs(Math.round((data.x1 - data.x0) / 2)) + Math.min(data.x1, data.x0);
+        data.y2 = Math.abs(Math.round((data.y1 - data.y0) / 2)) + Math.min(data.y1, data.y0);
         data.plan = plan_id;
         data["csrfmiddlewaretoken"] = csrf_token;
         var url = '/catalog/add_element/';
@@ -251,7 +428,7 @@ function ajaxPostPlan(data, url, message) {
     url: url,
     type: 'POST',
     data: data,
-    cache: true,
+    cache: false,
     success: function (data) {
       console.log("POST OK: ", message);
       getPlan();
@@ -267,7 +444,7 @@ function ajaxPostElement(data, url, message) {
     url: url,
     type: 'POST',
     data: data,
-    cache: true,
+    cache: false,
     success: function (data) {
       console.log("POST OK: ", message);
       getElements();
@@ -366,26 +543,8 @@ $('#selector button').click(function () {
 });
 
 $('#add').click(function () {
-  addSizeInput (-500, 10);
-}); 
+  console.log("canvasDiv = ", canvasDiv.getBoundingClientRect().top);//getBoundingClientRect()
+  console.log(canvasPaddingLeft);
+  //addSizeInput(-500, 10);
+});
 
-function addSizeInput (t, l) {
-  var articleDiv = document.getElementsByClassName("edit-field");
-  var elem = document.createElement("input");
-  var a = String(t) + "px";
-  var b = String(l) + "px";
-  elem.id = "0";
-  elem.type  = "number";
-  elem.min  = 0;
-  elem.max  = 90000;
-  elem.pattern  = "[0-9]{0,5}";
-  elem.inputmode  = "numeric";
-  elem.maxLength = 5;
-  elem.value = 0;
-  elem.style.top = a;
-  elem.style.left = b;
-  elem.style.position = "relative";
-  elem.style.width = "60px";
-  elem.style.height = "20px";
-  articleDiv[0].appendChild(elem);
-}

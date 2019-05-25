@@ -6,12 +6,24 @@
 .edit-field {
     position: relative; /* Относительное позиционирование */
     background: #f0f0f0; /* Цвет фона */
-    height: 800px; /* Высота блока */
+    /*height: 800px;  Высота блока */
    }
    
 .canvas-field {
-    top: 50px;
+    /* top: 40px; */
     /* bottom: 15px; Положение от нижнего края */
-    left: 80px; /* Положение от левого края */
-    position: relative; /* Относительное позиционирование */
+    /* left: 80px; Положение от левого края */
+    /* position: relative; Относительное позиционирование */
+   }
+
+/* hide up down buttons in size input field because it doesn't allow make checking if value changed: if you click at these arrows it raise click event and rewrite sizeOld variable */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     appearance: none;
+     margin: 0;
+   }
+input[type="number"] {
+     -moz-appearance: textfield;
    }

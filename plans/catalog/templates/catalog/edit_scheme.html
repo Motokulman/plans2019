@@ -11,26 +11,56 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-sm-8">
-      <div class="edit-field">
-        <form id="canvas_form" class="canvas-field" action="{% url 'add_element' %}" name="{{ plan_id}}" method="POST" >
-          {% csrf_token %}
-          <canvas id="canvas" style="border: 1px solid" width="800" height="700" ></canvas>
-        </form>
+      <div class="row">
+        <div class="col-sm-12" id="top-edit-field">
+          Верхние числа
+        </div>
       </div>
-    </div>
-    <div class="col-sm-2">
-      <div id="selector" class="btn-group">
-        <button id="wall" type="button" class="btn btn-light">Wall</button>
-        <!-- <button id="wall_b" type="button" class="btn btn-light">Wall B type</button> -->
-        <button id="none" type="button" class="btn btn-light">Reset</button>
-      </div>
-      <button id="add" type="button" class="btn btn-light">Add</button>
-      <div class="article">
+      <div class="row">
+        <div class="col-sm-1" id="left-edit-field">
+        </div>
 
+        <div class="col-sm-10" id="edit-field">
+        <!-- <div class="edit-field" id="edit-field"> -->
+          <form id="canvas_form" class="canvas-field" action="{% url 'add_element' %}" name="{{ plan_id}}"
+            method="POST">
+            {% csrf_token %}
+            <canvas id="canvas" style="border: 1px solid" width="800" height="700"></canvas>
+          </form>
+        <!-- </div> -->
       </div>
+
+      <div class="col-sm-1" id="right-edit-field">
+        Числа справа
+      </div>
+
+      <div class="row">
+          <div class="col-sm-12" id="bottom-edit-field">
+            Нижние числа
+          </div>
+        </div>
+
     </div>
+
+
+
+
+
 
   </div>
+  <div class="col-sm-2">
+    <div id="selector" class="btn-group">
+      <button id="wall" type="button" class="btn btn-light">Wall</button>
+      <!-- <button id="wall_b" type="button" class="btn btn-light">Wall B type</button> -->
+      <button id="none" type="button" class="btn btn-light">Reset</button>
+    </div>
+    <button id="add" type="button" class="btn btn-light">Add</button>
+    <div class="article">
+
+    </div>
+  </div>
+
+</div>
 </div>
 
 {% load static %}
