@@ -21,46 +21,69 @@
         </div>
 
         <div class="col-sm-10" id="edit-field">
-        <!-- <div class="edit-field" id="edit-field"> -->
+          <!-- <div class="edit-field" id="edit-field"> -->
           <form id="canvas_form" class="canvas-field" action="{% url 'add_element' %}" name="{{ plan_id}}"
             method="POST">
             {% csrf_token %}
             <canvas id="canvas" style="border: 1px solid" width="800" height="700"></canvas>
           </form>
-        <!-- </div> -->
-      </div>
+          <!-- </div> -->
+        </div>
 
-      <div class="col-sm-1" id="right-edit-field">
-        Числа справа
-      </div>
+        <div class="col-sm-1" id="right-edit-field">
+          Числа справа
+        </div>
 
-      <div class="row">
+        <div class="row">
           <div class="col-sm-12" id="bottom-edit-field">
-            Нижние числа
           </div>
         </div>
 
+      </div>
+
+
+
+
+
+
     </div>
+    <div class="col-sm-2">
+      <div id="selector" class="btn-group">
+        <button id="none" type="button" class="btn btn-light">Reset</button>
+        <button id="wall" type="button" class="btn btn-light">Wall</button>
+        <button id="rounded_wall" type="button" class="btn btn-light">Rounded wall</button>
+        <button id="plate" type="button" class="btn btn-light">Plate</button>
 
-
-
-
-
+      </div>
+      <button id="add" type="button" class="btn btn-light">Add</button>
+      <h3>Тип стены</h3>
+      <form id="wall_type_form">
+        <label><input type="radio" value="a_type" checked name="wall_type" />Тип А</label>
+        <label><input type="radio" value="b_type" name="wall_type" />Тип B</label>
+        <label><input type="radio" value="partition" name="wall_type" />Перегородка</label>
+        <label><input type="radio" value="glass" name="wall_type" />Витраж</label>
+        <label><input type="radio" value="railing" name="wall_type" />Ограждение</label>
+      </form>
+      <h3>Этаж</h3>
+      <form id="floor_form">
+        <table>
+        </table>
+      </form>
+      <form id="plate_type_form">
+        <label><input type="radio" value="universal" checked name="plate_type" />Универсальное</label>
+        <label><input type="radio" value="by_soil" name="plate_type" />По грунту</label>
+        <label><input type="radio" value="wood" name="plate_type" />Дерево</label>
+        <label><input type="radio" value="hanging_monolith" name="plate_type" />Монолит висячий</label>
+        <label><input type="radio" value="hollow_plates" name="plate_type" />Плиты ПК</label>
+      </form>
+      <h3>Перекрытия</h3>
+      <form id="plates_form">
+        <table>
+        </table>
+      </form>
+    </div>
 
   </div>
-  <div class="col-sm-2">
-    <div id="selector" class="btn-group">
-      <button id="wall" type="button" class="btn btn-light">Wall</button>
-      <!-- <button id="wall_b" type="button" class="btn btn-light">Wall B type</button> -->
-      <button id="none" type="button" class="btn btn-light">Reset</button>
-    </div>
-    <button id="add" type="button" class="btn btn-light">Add</button>
-    <div class="article">
-
-    </div>
-  </div>
-
-</div>
 </div>
 
 {% load static %}

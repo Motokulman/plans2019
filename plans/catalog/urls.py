@@ -26,4 +26,13 @@ urlpatterns += [
     path('set_plan_paddingY/', views.set_plan_paddingY, name='set_plan_paddingY'),
     path('set_element_x/', views.set_element_x, name='set_element_x'),
     path('set_element_y/', views.set_element_y, name='set_element_y'),
+    path('add_floor/', views.add_floor, name='add_floor'),
+    path('get_floors/', views.get_floors, name='get_floors'),
+    path('add_level/', views.add_level, name='add_level'),
+    path('set_floor/', views.set_floor, name='set_floor'),
+    path('set_plate/', views.set_plate, name='set_plate'),
+    path('add_plate/', views.add_plate, name='add_plate'),
+    path('add_plate_point/', views.add_plate_point, name='add_plate_point'),
+    path('get_plates/', views.get_plates, name='get_plates'),
+
 ]

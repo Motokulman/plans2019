@@ -1,11 +1,18 @@
 var ctx = canvas.getContext('2d');
 var running = false;
-var mouseOldPos;
+var roundedWallSetStage = 0;
+var mouseOldPos0;
+var mouseOldPos1;
 var mousePos;
 var existedElements;
+var floors;
+var plates;
+var plateId;
+var last_plate; // when draw new plate, first added new plate and then points of this plate. You need to know last added plate for adding points of this new plate
 var plan;
 var getElementsEvent = new Event('getElements'); // event when ajax returns data
-//var getPlanEvent = new Event('getPlan'); // event when ajax returns data
+var getFloorsEvent = new Event('getFloors');
+var getPlatesEvent = new Event('getPlates');
 var elementLineWidth = 3;
 var guideLineWidth = 1;
 var selectedTool = "none";
@@ -17,6 +24,8 @@ var canvasDiv = document.getElementById("canvas_form");
 var editDiv = document.getElementById("edit-field");
 // var topEditField = document.getElementById("top-edit-field");
 var leftEditField = document.getElementById("left-edit-field");
+var floorEditField = document.getElementById("floor_form");
+var plateEditField = document.getElementById("plates_form");
 // var rightEditField = document.getElementById("right-edit-field");
 var bottomEditField = document.getElementById("bottom-edit-field");
 var canvasPaddingTop = canvasDiv.getBoundingClientRect().top - editDiv.getBoundingClientRect().top;
@@ -25,10 +34,15 @@ var yShift = canvas.height + 20 - canvasPaddingTop; // canvas.height + bootstrap
 var data = {};
 var dataPlan = {};
 var url;
+var wallType = "a_type";
+var floorId;
+var mousePosArray = [];
+
 // settings for size inputs
 var sizeInputWidth = 60;
 var sizeInputHeight = 20;
 var sizeOld; // for detecting if the size in input field was really changed instead blind sending to server
+var typeOld; 
 
 
 ctx.lineCap = 'square';
@@ -43,6 +57,12 @@ function drawExisted(data, paddingX, paddingY) {
     ctx.stroke();
 
   }
+
+  ctx.beginPath();
+  //ctx.moveTo(20, 90);
+  ctx.arc(25, 25, 15, 0, 2 * Math.PI / 3, 1);
+  // ctx.closePath();
+  ctx.stroke();
 }
 
 // get existing elements from DB
@@ -64,7 +84,7 @@ function getElements() {
       $(".SizeInput").remove();
       //var i = 0;
       let xAxisesSet = new Set(); // use Set for storing unique sizes only
-      let yAxisesSet = new Set();  
+      let yAxisesSet = new Set();
       for (item of existedElements.values()) {
         xAxisesSet.add(item.fields.x0);
         xAxisesSet.add(item.fields.x1);
@@ -93,6 +113,49 @@ function getElements() {
   });
 }
 
+// get existed floors of this plan from DB
+function getFloors() {
+  var data = {};
+  data.plan = plan_id;
+  var url = '/catalog/get_floors/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    success: function (data) {
+      floors = JSON.parse(data);
+      // console.log("OK Getting stored floors");
+      // console.log("floors = ", floors);
+      document.dispatchEvent(getFloorsEvent);//raise event when the reqiest recieved and we can draw existed elements 
+    },
+    error: function () {
+      console.log("Getting stored elements error");
+    }
+  });
+}
+
+// get existed plates from DB
+function getPlates() {
+  var data = {};
+  data.plan = plan_id;
+  var url = '/catalog/get_plates/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    success: function (data) {
+      plates = JSON.parse(data);
+      console.log("OK Getting stored plates: ", plates);
+      //raise event when the reqiest recieved and we can draw existed elements
+      document.dispatchEvent(getPlatesEvent);
+    },
+    error: function () {
+      console.log("Getting stored plates error");
+    }
+  });
+}
 
 
 function addSizeInput(top, left, inputField, id, size) {
@@ -117,6 +180,9 @@ function addSizeInput(top, left, inputField, id, size) {
   elem.style.webkitAppearance = none;
   inputField.appendChild(elem);
 }
+
+
+
 
 // get current plan info from DB - padding, scaling
 function getPlan() {
@@ -161,22 +227,104 @@ function getPlan() {
 $(document).ready(function () {
   getPlan();
   getElements();
+  getFloors();
+  getPlates();
 });
 
 // draw existed elements when GET request returned saved elements
 document.addEventListener('getElements', function (e) {
+  console.log("floors.length = ");
   if ((plan[0].fields.paddingX != null) && (plan[0].fields.paddingY != null)) {
     drawExisted(existedElements, paddingX, paddingY);
   }
 }, false);
+
+document.addEventListener('getFloors', function (e) {
+  if (floors.length == 0) {
+    //console.log("floors.length 1= ");
+    // if it new empty plan, create level's presets
+    addFloor("Первый этаж", 3000, 0, 0, 0);
+    addFloor("Второй этаж", 3000, 0, 1, 0);
+    addFloor("Третий этаж", 3000, 0, 2, 0);
+    addFloor("Цоколь", 2000, 0, -1, 0);
+    addFloor("Гараж", 2500, 1, 0, -900);
+
+  }
+}, false);
+
+
+document.addEventListener('getPlates', function (e) {
+  if (plates.length != 0) {
+    last_plate = plates[plates.length - 1];
+    console.log("getPlates = ", plates);
+    // console.log("last_plate = ", last_plate);
+    for (var i = 0; i < mousePosArray.length; i++) {
+      data = {};
+      data.plate = last_plate.pk;
+   //   console.log("data.plate = ", last_plate.pk);
+      data.x = mousePosArray[i].x;
+      data.y = mousePosArray[i].y;
+      data["csrfmiddlewaretoken"] = csrf_token;
+    //   console.log("data ajaxPostPlatePoint = ", data);
+      var url = '/catalog/add_plate_point/';
+      ajaxPostPlatePoint(data, url, "add new plate point");
+    }
+    mousePosArray = [];
+  }
+
+}, false);
+
+function addFloor(title, height, batch, order, levelFromGroundFloor) {
+  //console.log("floors.length = ", floors.length);
+  var data = {};
+  data.plan = plan_id;
+  data.title = title;
+  data.height = height;
+  data.batch = batch;
+  data.order = order;
+  data.levelFromGroundFloor = levelFromGroundFloor;
+  data["csrfmiddlewaretoken"] = csrf_token;
+  var url = '/catalog/add_floor/';
+  console.log("data = ", data);
+  ajaxPostFloor(data, url, title + " floor preset");
+}
+
+// function addPlate(title, floor, plateType) {
+//   var data = {};
+//   data.plan = plan_id;
+//   data.title = title;
+//   data.floor = floor;
+//   data.plateType = plateType;
+//   data["csrfmiddlewaretoken"] = csrf_token;
+//   var url = '/catalog/add_plate/';
+//   console.log("data = ", data);
+//   ajaxPostPlate(data, url, title + " plate");
+// }
 
 
 // draw new line
 var elementLine = {
   draw: function () {
     ctx.beginPath();
-    ctx.moveTo(mouseOldPos.x, mouseOldPos.y);
+    ctx.moveTo(mouseOldPos0.x, mouseOldPos0.y);
     ctx.lineTo(mousePos.x, mousePos.y);
+    ctx.stroke();
+  }
+};
+
+// draw new circle
+var circleLine = {
+  draw: function () {
+    var xc = (Math.max(mouseOldPos1.x, mouseOldPos0.x) - Math.min(mouseOldPos1.x, mouseOldPos0.x)) / 2 + Math.min(mouseOldPos1.x, mouseOldPos0.x);
+    var yc = (Math.max(mouseOldPos1.y, mouseOldPos0.y) - Math.min(mouseOldPos1.y, mouseOldPos0.y)) / 2 + Math.min(mouseOldPos1.y, mouseOldPos0.y);
+    var a = mouseOldPos1.x - mouseOldPos0.x;
+    var z = mouseOldPos1.y - mouseOldPos0.y;
+    var k = - a / z;
+    var b = yc - k * xc;
+    var yh = k * mousePos.x + b;
+    ctx.beginPath();
+    ctx.moveTo(xc, yc);
+    ctx.lineTo(mousePos.x, yh);
     ctx.stroke();
   }
 };
@@ -187,12 +335,36 @@ function clear() {
 }
 
 canvas.addEventListener('mousemove', function (e) {
-  if (running) {
-    clear();
-    sticking(canvas, e, existedElements);
-    drawExisted(existedElements, paddingX, paddingY);
-    elementLine.draw();
-  } else if (selectedTool != "none") {
+  if (selectedTool == "wall") {
+    if (running) {
+      clear();
+      sticking(canvas, e, existedElements);
+      drawExisted(existedElements, paddingX, paddingY);
+      elementLine.draw();
+    } else {
+      clear();
+      sticking(canvas, e, existedElements);
+      drawExisted(existedElements, paddingX, paddingY);
+    }
+  }
+  if (selectedTool == "rounded_wall") {
+    if (roundedWallSetStage == 1) {
+      clear();
+      sticking(canvas, e, existedElements);
+      drawExisted(existedElements, paddingX, paddingY);
+      elementLine.draw();
+    } else if (roundedWallSetStage == 2) {
+      clear();
+      sticking(canvas, e, existedElements);
+      drawExisted(existedElements, paddingX, paddingY);
+      circleLine.draw();
+    } else {
+      clear();
+      sticking(canvas, e, existedElements);
+      drawExisted(existedElements, paddingX, paddingY);
+    }
+  }
+  if (selectedTool == "plate") {
     clear();
     sticking(canvas, e, existedElements);
     drawExisted(existedElements, paddingX, paddingY);
@@ -203,7 +375,7 @@ canvas.addEventListener('mousemove', function (e) {
 canvas.addEventListener('click', function (e) {
   if (selectedTool == "wall") {
     if (!running) {
-      mouseOldPos = mousePos;
+      mouseOldPos0 = mousePos;
       running = true;
     } else {
       data = {};
@@ -211,113 +383,140 @@ canvas.addEventListener('click', function (e) {
       running = false;
       // if it's first line
       if (plan[0].fields.paddingX == null) {
-        paddingX = Math.min(mousePos.x, mouseOldPos.x);
-        paddingY = Math.min(mousePos.y, mouseOldPos.y);
+        paddingX = Math.min(mousePos.x, mouseOldPos0.x);
+        paddingY = Math.min(mousePos.y, mouseOldPos0.y);
 
         // post first coords
-        if (mousePos.x > mouseOldPos.x) {
-          data.x1 = mousePos.x - mouseOldPos.x;
+        if (mousePos.x > mouseOldPos0.x) {
+          data.x1 = mousePos.x - mouseOldPos0.x;
           data.x0 = 0;
         } else {
-          data.x0 = mouseOldPos.x - mousePos.x;
+          data.x0 = mouseOldPos0.x - mousePos.x;
           data.x1 = 0;
         }
-        if (mousePos.y > mouseOldPos.y) {
+        if (mousePos.y > mouseOldPos0.y) {
           data.y0 = 0;
-          data.y1 = mousePos.y - mouseOldPos.y;
+          data.y1 = mousePos.y - mouseOldPos0.y;
         } else {
           data.y1 = 0;
-          data.y0 = mouseOldPos.y - mousePos.y;
+          data.y0 = mouseOldPos0.y - mousePos.y;
         }
 
-        data.x2 = Math.round(Math.abs(mousePos.x - mouseOldPos.x) / 2);
-        data.y2 = Math.round(Math.abs(mousePos.y - mouseOldPos.y) / 2);
         data.plan = plan_id;
         data["csrfmiddlewaretoken"] = csrf_token;
         url = '/catalog/add_element/';
+        data.wallType = wallType;
         ajaxPostElement(data, url, "first element");
 
         // post paddings into plan
-
         dataPlan.plan = plan_id;
         dataPlan["csrfmiddlewaretoken"] = csrf_token;
         url = '/catalog/set_plan_paddingY/';
         dataPlan.paddingY = paddingY;
-        // console.log("dataPlan.paddingY = ", dataPlan.paddingY);
         ajaxPostPlan(dataPlan, url, "first paddingY");
-
         url = '/catalog/set_plan_paddingX/';
         dataPlan.paddingX = paddingX;
         ajaxPostPlan(dataPlan, url, "first paddingX");
-
       } else {
         // check if new line getting smaller paddings
-        if (paddingX > Math.min(mousePos.x, mouseOldPos.x)) {
-          // console.log("paddingX > Math.min(mousePos.x, mouseOldPos.x)");
-          var delta = paddingX - Math.min(mousePos.x, mouseOldPos.x);
-          paddingX = Math.min(mousePos.x, mouseOldPos.x);
-          // var dataArray = {
-          //   csrfmiddlewaretoken: csrf_token,
-          //   fields: [
-          //   ]
-
-          // };
+        if (paddingX > Math.min(mousePos.x, mouseOldPos0.x)) {
+          var delta = paddingX - Math.min(mousePos.x, mouseOldPos0.x);
+          paddingX = Math.min(mousePos.x, mouseOldPos0.x);
           data["csrfmiddlewaretoken"] = csrf_token;
           var url = '/catalog/set_element_x/';
           for (var i = 0; i < existedElements.length; i++) {
             data.pk = existedElements[i].pk;
             data.x0 = existedElements[i].fields.x0 + delta;
             data.x1 = existedElements[i].fields.x1 + delta;
-            data.x2 = existedElements[i].fields.x2 + delta;
-            // console.log("data = ", data);
             ajaxPostElement(data, url, "change x coords");
           }
-
           dataPlan.plan = plan_id;
           dataPlan["csrfmiddlewaretoken"] = csrf_token;
           var url = '/catalog/set_plan_paddingX/';
           dataPlan.paddingX = paddingX;
           ajaxPostPlan(dataPlan, url, "set new paddingX");
         }
-        if (paddingY > Math.min(mousePos.y, mouseOldPos.y)) {
-          var delta = paddingY - Math.min(mousePos.y, mouseOldPos.y);
-          paddingY = Math.min(mousePos.y, mouseOldPos.y);
-
+        if (paddingY > Math.min(mousePos.y, mouseOldPos0.y)) {
+          var delta = paddingY - Math.min(mousePos.y, mouseOldPos0.y);
+          paddingY = Math.min(mousePos.y, mouseOldPos0.y);
           data["csrfmiddlewaretoken"] = csrf_token;
           var url = '/catalog/set_element_y/';
           for (var i = 0; i < existedElements.length; i++) {
             data.pk = existedElements[i].pk;
             data.y0 = existedElements[i].fields.y0 + delta;
             data.y1 = existedElements[i].fields.y1 + delta;
-            data.y2 = existedElements[i].fields.y2 + delta;
-            // console.log("data = ", data);
             ajaxPostElement(data, url, "change y coords");
           }
-
           dataPlan.plan = plan_id;
           dataPlan["csrfmiddlewaretoken"] = csrf_token;
           var url = '/catalog/set_plan_paddingY/';
           dataPlan.paddingY = paddingY;
           ajaxPostPlan(dataPlan, url, "set new paddingY");
         }
-
-        data.x0 = mouseOldPos.x - paddingX;
-        data.y0 = mouseOldPos.y - paddingY;
+        data.x0 = mouseOldPos0.x - paddingX;
+        data.y0 = mouseOldPos0.y - paddingY;
         data.x1 = mousePos.x - paddingX;
         data.y1 = mousePos.y - paddingY;
-        data.x2 = Math.abs(Math.round((data.x1 - data.x0) / 2)) + Math.min(data.x1, data.x0);
-        data.y2 = Math.abs(Math.round((data.y1 - data.y0) / 2)) + Math.min(data.y1, data.y0);
+        data.wallType = wallType;
         data.plan = plan_id;
         data["csrfmiddlewaretoken"] = csrf_token;
         var url = '/catalog/add_element/';
         ajaxPostElement(data, url, "add new element");
-
       }
 
 
 
     }
   }
+
+  if (selectedTool == "rounded_wall") {
+    if (roundedWallSetStage == 0) {
+      console.log("rounded_wall roundedWallSetStage == 0");
+      mouseOldPos0 = mousePos;
+      roundedWallSetStage = 1;
+    } else if (roundedWallSetStage == 1) {
+      console.log("rounded_wall roundedWallSetStage == 1");
+      mouseOldPos1 = mousePos;
+      console.log("mouseOldPos1 = ", mouseOldPos1);
+      roundedWallSetStage = 2;
+    } else {
+      roundedWallSetStage = 0;
+    }
+  }
+
+  if (selectedTool == "plate") {
+    if ((mousePosArray.length != 0) && (mousePosArray[0].x == mousePos.x) && (mousePosArray[0].y == mousePos.y)) {
+      {
+        for (var i = 0; i < $("[name='plate_type']").length; i++) {
+          if ($("[name='plate_type']")[i].checked) {
+            plateType = $("[name='plate_type']")[i].value;
+          }
+        }
+        data = {};
+        data.plan = plan_id;
+        data.title = "test plate title";
+        data.floor = floorId;
+        data.plateType = plateType;
+        data["csrfmiddlewaretoken"] = csrf_token;
+        var url = '/catalog/add_plate/';
+        ajaxPostPlate(data, url, "add new plate");
+
+
+
+      }
+    } else if (mousePosArray.length == 0) {
+      console.log("mousePosArray.length == ", + mousePosArray.length);
+      mousePosArray.push(mousePos);
+      console.log("mousePosArray.length.push == ", + mousePosArray.length);
+    } else if ((mousePosArray[0].x != mousePos.x) || (mousePosArray[0].y != mousePos.y)) {
+      console.log("(mousePosArray[0].x != mousePos.x) || (mousePosArray[0].y != mousePos.y) ");
+      mousePosArray.push(mousePos);
+    }
+  }
+
+
+
+
 });
 
 function ajaxPostPlan(data, url, message) {
@@ -354,6 +553,60 @@ function ajaxPostElement(data, url, message) {
   });
 }
 
+function ajaxPostFloor(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      getFloors();
+      console.log("POST OK: ", message);
+
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
+
+
+function ajaxPostPlate(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      getPlates();
+      console.log("POST OK: ", message);
+
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
+
+function ajaxPostPlatePoint(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      //getPlates();
+      console.log("POST OK: ", message);
+
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
 
 function getMousePos(canvas, e) {
   var rect = canvas.getBoundingClientRect();
@@ -369,16 +622,14 @@ function sticking(canvas, e, data) {
   mousePos = getMousePos(canvas, e);
   var flagX = false;
   var flagY = false;
-  // var flagCX = false;
-  // var flagCY = false;
   // Sticking to horizont and vertical
   if (running) {
-    if (Math.abs(mousePos.x - mouseOldPos.x) <= stickPixels) {
-      mousePos.x = mouseOldPos.x;
+    if (Math.abs(mousePos.x - mouseOldPos0.x) <= stickPixels) {
+      mousePos.x = mouseOldPos0.x;
       flagX = true;
     }
-    if (Math.abs(mousePos.y - mouseOldPos.y) <= stickPixels) {
-      mousePos.y = mouseOldPos.y;
+    if (Math.abs(mousePos.y - mouseOldPos0.y) <= stickPixels) {
+      mousePos.y = mouseOldPos0.y;
       flagY = true;
     }
   }
@@ -398,15 +649,6 @@ function sticking(canvas, e, data) {
       mousePos.y = item.fields.y1 + paddingY;
       flagY = true;
     }
-    //is it center
-    // if ((Math.abs(mousePos.x - item.fields.x2) <= stickPixels) && (item.fields.x2 != item.fields.x0)) {
-    //   mousePos.x = item.fields.x2;
-    //   flagCX = true;
-    // }
-    // if ((Math.abs(mousePos.y - item.fields.y2) <= stickPixels) && (item.fields.y2 != item.fields.y0)) {
-    //   mousePos.y = item.fields.y2;
-    //   flagCY = true;
-    // }
   }
   // draw guidelines
   if (flagX || flagY) {
@@ -434,19 +676,16 @@ function sticking(canvas, e, data) {
 $('#selector button').click(function () {
   $(this).addClass('active').siblings().removeClass('active');
   selectedTool = this.id;
-  // if (this.id == "wall") {
-  //   selectedTool = "wall";
-  // } else if (this.id == "none") {
-  //   selectedTool = "none";
-  // }
 });
 
-$('#add').click(function () {
-//  console.log("canvasDiv = ", canvasDiv.getBoundingClientRect().top);//getBoundingClientRect()
-  //console.log(canvasPaddingLeft);
-  //addSizeInput(-500, 10);
-});
+wall_type_form.addEventListener('change', function (evt) {
+  wallType = event.target.value;
+})
 
+
+// floor_form.addEventListener('change', function (evt) {
+//   console.log("event.target.value = ", event.target.value);
+// })
 
 // adding input fields between Y axises
 function addInputFieldsBetweenAxisesY(yAxisesArray) {
@@ -474,7 +713,6 @@ function addInputFieldsBetweenAxisesY(yAxisesArray) {
             data["csrfmiddlewaretoken"] = csrf_token;
             data.y0 = existedElements[i].fields.y0;
             data.y1 = existedElements[i].fields.y1;
-            data.y2 = existedElements[i].fields.y2;
             var flag = false;
             if (existedElements[i].fields.y0 >= startValue) {
               data.y0 = existedElements[i].fields.y0 + delta;
@@ -500,7 +738,7 @@ function addInputFieldsBetweenAxisesY(yAxisesArray) {
 function addInputFieldsBetweenAxisesX(xAxisesArray) {
   for (var i = 1; i < xAxisesArray.length; i++) {
     var size = xAxisesArray[i] - xAxisesArray[i - 1];
-    addSizeInput(10, paddingX + xAxisesArray[i - 1] + size / 2 - sizeInputWidth / 2 - (i - 1) * (sizeInputWidth + 4), bottomEditField, "bottom" + String(i - 1), size);  // X between
+    addSizeInput(10, paddingX + xAxisesArray[i - 1] + size / 2 - sizeInputWidth / 2 - (i - 1) * (sizeInputWidth + 4) + document.getElementById("left-edit-field").offsetWidth + 30, bottomEditField, "bottom" + String(i - 1), size);  // X between
     //set the event listener for changing size
     var currentInput = document.getElementById("bottom" + String(i - 1));
     currentInput.addEventListener("focus", function (e) {
@@ -522,7 +760,6 @@ function addInputFieldsBetweenAxisesX(xAxisesArray) {
             data["csrfmiddlewaretoken"] = csrf_token;
             data.x0 = existedElements[i].fields.x0;
             data.x1 = existedElements[i].fields.x1;
-            data.x2 = existedElements[i].fields.x2;
             var flag = false;
             if (existedElements[i].fields.x0 >= startValue) {
               data.x0 = existedElements[i].fields.x0 + delta;
@@ -542,4 +779,216 @@ function addInputFieldsBetweenAxisesX(xAxisesArray) {
       }
     });
   }
+}
+
+
+function addFloorInput(inputField, item, id) {
+  var selectFloorField = document.createElement("input");
+  selectFloorField.id = "selectFloorField" + id;
+  selectFloorField.name = "floor_type"
+  selectFloorField.type = "radio";
+  selectFloorField.className = "selectFloorField";
+  if (id == 0) {
+    selectFloorField.checked = true;
+    floorId = 0;
+    console.log("floorId =  ", floorId);
+  }
+  inputField.appendChild(selectFloorField);
+
+  var titleFloorField = document.createElement("input");
+  titleFloorField.id = "titleFloorField" + id;
+  titleFloorField.className = "FloorTitleInput";
+  titleFloorField.type = "text";
+  titleFloorField.value = item.fields.title;
+  inputField.appendChild(titleFloorField);
+
+  var sizeFloorField = document.createElement("input");
+  sizeFloorField.id = "sizeFloorField" + id;
+  sizeFloorField.className = "FloorSizeInput";
+  sizeFloorField.type = "number";
+  sizeFloorField.min = 0;
+  sizeFloorField.max = 10000;
+  sizeFloorField.pattern = "[0-9]{0,5}";
+  sizeFloorField.inputmode = "numeric";
+  sizeFloorField.maxLength = 5;
+  sizeFloorField.value = item.fields.height;
+  inputField.appendChild(sizeFloorField);
+}
+
+function addPlateInput(inputField, item, id) {
+  var selectPlateField = document.createElement("input");
+  selectPlateField.id = "selectPlateField" + id;
+  selectPlateField.name = "plate"
+  selectPlateField.type = "radio";
+  selectPlateField.className = "selectFloorField";
+  if (id == 0) {
+    selectPlateField.checked = true;
+    plateId = 0;
+    console.log("plateId =  ", plateId);
+  }
+  inputField.appendChild(selectPlateField);
+
+  var titlePlateField = document.createElement("input");
+  titlePlateField.id = "titlePlateField" + id;
+  titlePlateField.className = "PlateTitleInput";
+  titlePlateField.type = "text";
+  titlePlateField.value = item.fields.title;
+  inputField.appendChild(titlePlateField);
+
+  var floorPlateField = document.createElement("input");
+  floorPlateField.id = "floorPlateField" + id;
+  floorPlateField.className = "PlateFloorInput";
+  floorPlateField.type = "text";
+  floorPlateField.value = item.fields.plateType;
+  inputField.appendChild(floorPlateField);
+  
+  var typePlateField = document.createElement("input");
+  typePlateField.id = "typePlateField" + id;
+  typePlateField.className = "PlateTypeInput";
+  typePlateField.type = "text";
+  typePlateField.value = item.fields.plateType;
+  inputField.appendChild(typePlateField);
+}
+
+
+// adding input fields for floors
+function addFloorInputTable() {
+  for (var i = 0; i < floors.length; i++) {
+    addFloorInput(floorEditField, floors[i], i);
+    //set the event listener for changing size
+    var currentInput = document.getElementById("sizeFloorField" + String(i));
+    currentInput.addEventListener("focus", function (e) {
+      sizeOld = this.value;
+    });
+    currentInput.addEventListener("blur", function (e) {
+      if ((this.value <= 0) || (this.value > 99999)) { // введено не число
+        this.focus(); //Введено неправильное значение ... и вернуть фокус обратно 
+      } else if (sizeOld != this.value) { // if size was really changed
+        // find current field's id
+        var data = {};
+        var i = this.id.substr(14);
+        console.log("floors[i].pk = ", floors[i]);
+        data.pk = floors[i].pk;
+        data["csrfmiddlewaretoken"] = csrf_token;
+        data.title = floors[i].fields.title;
+        data.height = this.value;
+        var url = '/catalog/set_floor/';
+        console.log("data height =  ", data);
+        ajaxPostFloor(data, url, "change height of the floor " + floors[i].fields.title + " from " + floors[i].fields.height + " to " + this.value);
+      }
+    });
+    //set the event listener for changing title
+    currentInput = document.getElementById("titleFloorField" + String(i));
+    currentInput.addEventListener("focus", function (e) {
+      sizeOld = this.value;
+    });
+    currentInput.addEventListener("blur", function (e) {
+      if (sizeOld != this.value) { // if size was really changed
+        // find current field's id
+        var data = {};
+        var i = this.id.substr(15);
+
+        data.pk = floors[i].pk;
+        data["csrfmiddlewaretoken"] = csrf_token;
+        data.height = floors[i].fields.height;
+        data.title = this.value;
+        var url = '/catalog/set_floor/';
+        ajaxPostFloor(data, url, "change title of the floor from " + floors[i].fields.title + " to " + this.value);
+      }
+    });
+
+    //set the event listener for radio choice
+    currentInput = document.getElementById("selectFloorField" + String(i));
+    currentInput.addEventListener("change", function (e) {
+      floorId = this.id.substr(16);
+    });
+  }
+}
+
+
+// adding input fields for plates
+function addPlatesInputTable() {
+  for (var i = 0; i < floors.length; i++) {
+    addPlateInput(plateEditField, plates[i], i);
+    //set the event listener for changing type
+    var currentInput = document.getElementById("typePlateField" + String(i));
+    currentInput.addEventListener("focus", function (e) {
+      typeOld = this.value;
+    });
+    currentInput.addEventListener("blur", function (e) {
+      if (typeOld != this.value) { // if type was really changed
+        // find current field's id
+        var data = {};
+        var i = this.id.substr(14);
+       // console.log("floors[i].pk = ", floors[i]);
+        data.pk = plates[i].pk;
+        data["csrfmiddlewaretoken"] = csrf_token;
+        data.title = plates[i].fields.title;
+        data.floor = plates[i].fields.floor;
+        data.type = this.value;
+        var url = '/catalog/set_plate/';
+       // console.log("data height =  ", data);
+        ajaxPostPlate(data, url, "change type of the plate " + plates[i].fields.title + " from " + plates[i].fields.type + " to " + this.value);
+      }
+    });
+    //set the event listener for changing title
+    currentInput = document.getElementById("titlePlateField" + String(i));
+    currentInput.addEventListener("focus", function (e) {
+      sizeOld = this.value;
+    });
+    currentInput.addEventListener("blur", function (e) {
+      if (sizeOld != this.value) { // if title was really changed
+        // find current field's id
+        var data = {};
+        var i = this.id.substr(15);
+
+        data.pk = plates[i].pk;
+        data["csrfmiddlewaretoken"] = csrf_token;
+        data.floor = plates[i].fields.floor;
+        data.type = plates[i].fields.type;
+        data.title = this.value;
+        var url = '/catalog/set_plate/';
+        ajaxPostFloor(data, url, "change title of the plate from " + plates[i].fields.title + " to " + this.value);
+      }
+    });
+
+    //set the event listener for radio choice
+    currentInput = document.getElementById("selectPlateField" + String(i));
+    currentInput.addEventListener("change", function (e) {
+      plateId = this.id.substr(16);
+    });
+  }
+}
+
+document.addEventListener('getFloors', function (e) {
+  floorInputFieldUpdate();
+}, false);
+
+document.addEventListener('getPlates', function (e) {
+  plateInputFieldUpdate();
+}, false);
+
+$('#add').click(function () {
+  for (var i = 0; i < $("[name='plate_type']").length; i++) {
+    if ($("[name='plate_type']")[i].checked) {
+      plateType = $("[name='plate_type']")[i].value;
+      console.log("plateType =  ", plateType);
+    }
+  }
+
+});
+
+function floorInputFieldUpdate() {
+  $(".selectFloorField").remove();
+  $(".FloorTitleInput").remove();
+  $(".FloorSizeInput").remove();
+  addFloorInputTable();
+}
+
+function plateInputFieldUpdate() {
+  $(".selectPlateField").remove();
+  $(".PlateTitleInput").remove();
+  $(".PlateTypeInput").remove();
+  $(".PlateFloorInput").remove();
+  addPlatesInputTable();
 }
