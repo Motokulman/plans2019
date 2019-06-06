@@ -234,3 +234,15 @@ def get_plates(request):
     d = serializers.serialize('json', v)
 
     return JsonResponse(d, safe=False)
+
+    
+def get_plate_points(request):
+    """View function for getting all existed plate's points of the scheme of the specific plan"""
+
+    data = request.GET
+    plate = get_object_or_404(Plate, pk=data.get("plate"))
+
+    v = PlatePoint.objects.filter(plate=plate)
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)

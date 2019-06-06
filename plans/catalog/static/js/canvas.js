@@ -37,12 +37,16 @@ var url;
 var wallType = "a_type";
 var floorId;
 var mousePosArray = [];
+var allPlatesPointsArray = [];
 
 // settings for size inputs
 var sizeInputWidth = 60;
 var sizeInputHeight = 20;
 var sizeOld; // for detecting if the size in input field was really changed instead blind sending to server
-var typeOld; 
+var typeOld;
+var colorMap = new Map([["universal", "#90EE90"], ["by_soil", "#2F4F4F"], ["wood", "#BDB76B"], ["hanging_monolith", "#FF4500"], ["hollow_plates", "#FF00FF"]]);
+var color;
+var plateType;
 
 
 ctx.lineCap = 'square';
@@ -57,12 +61,9 @@ function drawExisted(data, paddingX, paddingY) {
     ctx.stroke();
 
   }
+  console.log("allPlatesDraw = ", );
+  allPlatesDraw();
 
-  ctx.beginPath();
-  //ctx.moveTo(20, 90);
-  ctx.arc(25, 25, 15, 0, 2 * Math.PI / 3, 1);
-  // ctx.closePath();
-  ctx.stroke();
 }
 
 // get existing elements from DB
@@ -156,6 +157,42 @@ function getPlates() {
     }
   });
 }
+// get existed plate's points from DB from just one plate
+function getPlatePoints(plateId) {
+  var data = {};
+  data.plate = plateId;
+  var url = '/catalog/get_plate_points/';
+  console.log("plateId = ", plateId);
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    success: function (data) {
+      allPlatesPointsArray.push(JSON.parse(data));
+     // console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
+      //polygon.draw(JSON.parse(data), color);
+      console.log("OK Getting stored plate's points: ", JSON.parse(data));
+    //  console.log("allPlatesPointsArray: ", allPlatesPointsArray);
+      //raise event when the reqiest recieved and we can draw existed elements
+      //document.dispatchEvent(getPlatePointsEvent);
+      allPlatesDraw();
+    },
+    error: function () {
+      console.log("Getting stored plate's points error");
+    }
+  });
+}
+
+function allPlatesDraw() {
+  console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
+  for (var i = 0; i < allPlatesPointsArray.length; i++) {
+    
+    //color = allPlatesPointsArray[i].type;
+    console.log("color = ", allPlatesPointsArray);
+    polygon.draw(allPlatesPointsArray[i], color);
+  }
+}
 
 
 function addSizeInput(top, left, inputField, id, size) {
@@ -229,6 +266,7 @@ $(document).ready(function () {
   getElements();
   getFloors();
   getPlates();
+  defineSelectedPlateType();
 });
 
 // draw existed elements when GET request returned saved elements
@@ -256,20 +294,22 @@ document.addEventListener('getFloors', function (e) {
 document.addEventListener('getPlates', function (e) {
   if (plates.length != 0) {
     last_plate = plates[plates.length - 1];
-    console.log("getPlates = ", plates);
-    // console.log("last_plate = ", last_plate);
-    for (var i = 0; i < mousePosArray.length; i++) {
+    for (var i = 0; i < mousePosArray.length; i++) { // if the new plate was added and we have an array of plate's points, let's add it
       data = {};
       data.plate = last_plate.pk;
-   //   console.log("data.plate = ", last_plate.pk);
       data.x = mousePosArray[i].x;
       data.y = mousePosArray[i].y;
       data["csrfmiddlewaretoken"] = csrf_token;
-    //   console.log("data ajaxPostPlatePoint = ", data);
       var url = '/catalog/add_plate_point/';
       ajaxPostPlatePoint(data, url, "add new plate point");
     }
     mousePosArray = [];
+
+    for (var i = 0; i < plates.length; i++) {
+    //  console.log("plates[i].id= ", plates[i].pk);
+      getPlatePoints(plates[i].pk);
+    }
+
   }
 
 }, false);
@@ -285,22 +325,9 @@ function addFloor(title, height, batch, order, levelFromGroundFloor) {
   data.levelFromGroundFloor = levelFromGroundFloor;
   data["csrfmiddlewaretoken"] = csrf_token;
   var url = '/catalog/add_floor/';
-  console.log("data = ", data);
+  //console.log("data = ", data);
   ajaxPostFloor(data, url, title + " floor preset");
 }
-
-// function addPlate(title, floor, plateType) {
-//   var data = {};
-//   data.plan = plan_id;
-//   data.title = title;
-//   data.floor = floor;
-//   data.plateType = plateType;
-//   data["csrfmiddlewaretoken"] = csrf_token;
-//   var url = '/catalog/add_plate/';
-//   console.log("data = ", data);
-//   ajaxPostPlate(data, url, title + " plate");
-// }
-
 
 // draw new line
 var elementLine = {
@@ -311,6 +338,44 @@ var elementLine = {
     ctx.stroke();
   }
 };
+
+// draw point
+var point = {
+  draw: function (x, y, r, c) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = c;// "#333333";
+    ctx.fill();
+    ctx.closePath();
+  }
+};
+
+// draw polygon
+var polygon = {
+  draw: function (arr) {
+    var c;
+    for (var i = 0; i < plates.length; i++) {
+      if (arr[0].fields.plate == plates[i].pk) {
+        c = colorMap.get(plates[i].fields.plateType);
+      }
+    }
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(arr[0].fields.x, arr[0].fields.y);
+    
+    for (var i = 1; i < arr.length; i++) {
+      ctx.lineTo(arr[i].fields.x, arr[i].fields.y);
+      console.log("arr[i].fields.x = ", arr[i].fields.x);
+      ctx.stroke();
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+
+  }
+};
+
 
 // draw new circle
 var circleLine = {
@@ -368,7 +433,12 @@ canvas.addEventListener('mousemove', function (e) {
     clear();
     sticking(canvas, e, existedElements);
     drawExisted(existedElements, paddingX, paddingY);
+    for (var i = 0; i < mousePosArray.length; i++) {
+      point.draw(mousePosArray[i].x, mousePosArray[i].y, 5, color);
+    }
   }
+
+
 });
 
 // clicking handler
@@ -487,11 +557,7 @@ canvas.addEventListener('click', function (e) {
   if (selectedTool == "plate") {
     if ((mousePosArray.length != 0) && (mousePosArray[0].x == mousePos.x) && (mousePosArray[0].y == mousePos.y)) {
       {
-        for (var i = 0; i < $("[name='plate_type']").length; i++) {
-          if ($("[name='plate_type']")[i].checked) {
-            plateType = $("[name='plate_type']")[i].value;
-          }
-        }
+        defineSelectedPlateType();
         data = {};
         data.plan = plan_id;
         data.title = "test plate title";
@@ -500,23 +566,18 @@ canvas.addEventListener('click', function (e) {
         data["csrfmiddlewaretoken"] = csrf_token;
         var url = '/catalog/add_plate/';
         ajaxPostPlate(data, url, "add new plate");
-
-
-
       }
     } else if (mousePosArray.length == 0) {
-      console.log("mousePosArray.length == ", + mousePosArray.length);
+      console.log("mousePosArray.length == ", mousePosArray.length);
       mousePosArray.push(mousePos);
-      console.log("mousePosArray.length.push == ", + mousePosArray.length);
+      console.log("mousePosArray.length.push == ", mousePosArray.length);
     } else if ((mousePosArray[0].x != mousePos.x) || (mousePosArray[0].y != mousePos.y)) {
       console.log("(mousePosArray[0].x != mousePos.x) || (mousePosArray[0].y != mousePos.y) ");
       mousePosArray.push(mousePos);
     }
+    color = colorMap.get(plateType);
+    point.draw(mousePos.x, mousePos.y, 5, color);
   }
-
-
-
-
 });
 
 function ajaxPostPlan(data, url, message) {
@@ -682,6 +743,10 @@ wall_type_form.addEventListener('change', function (evt) {
   wallType = event.target.value;
 })
 
+plate_type_form.addEventListener('change', function (evt) {
+  plateType = event.target.value;
+})
+
 
 // floor_form.addEventListener('change', function (evt) {
 //   console.log("event.target.value = ", event.target.value);
@@ -815,40 +880,6 @@ function addFloorInput(inputField, item, id) {
   inputField.appendChild(sizeFloorField);
 }
 
-function addPlateInput(inputField, item, id) {
-  var selectPlateField = document.createElement("input");
-  selectPlateField.id = "selectPlateField" + id;
-  selectPlateField.name = "plate"
-  selectPlateField.type = "radio";
-  selectPlateField.className = "selectFloorField";
-  if (id == 0) {
-    selectPlateField.checked = true;
-    plateId = 0;
-    console.log("plateId =  ", plateId);
-  }
-  inputField.appendChild(selectPlateField);
-
-  var titlePlateField = document.createElement("input");
-  titlePlateField.id = "titlePlateField" + id;
-  titlePlateField.className = "PlateTitleInput";
-  titlePlateField.type = "text";
-  titlePlateField.value = item.fields.title;
-  inputField.appendChild(titlePlateField);
-
-  var floorPlateField = document.createElement("input");
-  floorPlateField.id = "floorPlateField" + id;
-  floorPlateField.className = "PlateFloorInput";
-  floorPlateField.type = "text";
-  floorPlateField.value = item.fields.plateType;
-  inputField.appendChild(floorPlateField);
-  
-  var typePlateField = document.createElement("input");
-  typePlateField.id = "typePlateField" + id;
-  typePlateField.className = "PlateTypeInput";
-  typePlateField.type = "text";
-  typePlateField.value = item.fields.plateType;
-  inputField.appendChild(typePlateField);
-}
 
 
 // adding input fields for floors
@@ -906,75 +937,19 @@ function addFloorInputTable() {
 }
 
 
-// adding input fields for plates
-function addPlatesInputTable() {
-  for (var i = 0; i < floors.length; i++) {
-    addPlateInput(plateEditField, plates[i], i);
-    //set the event listener for changing type
-    var currentInput = document.getElementById("typePlateField" + String(i));
-    currentInput.addEventListener("focus", function (e) {
-      typeOld = this.value;
-    });
-    currentInput.addEventListener("blur", function (e) {
-      if (typeOld != this.value) { // if type was really changed
-        // find current field's id
-        var data = {};
-        var i = this.id.substr(14);
-       // console.log("floors[i].pk = ", floors[i]);
-        data.pk = plates[i].pk;
-        data["csrfmiddlewaretoken"] = csrf_token;
-        data.title = plates[i].fields.title;
-        data.floor = plates[i].fields.floor;
-        data.type = this.value;
-        var url = '/catalog/set_plate/';
-       // console.log("data height =  ", data);
-        ajaxPostPlate(data, url, "change type of the plate " + plates[i].fields.title + " from " + plates[i].fields.type + " to " + this.value);
-      }
-    });
-    //set the event listener for changing title
-    currentInput = document.getElementById("titlePlateField" + String(i));
-    currentInput.addEventListener("focus", function (e) {
-      sizeOld = this.value;
-    });
-    currentInput.addEventListener("blur", function (e) {
-      if (sizeOld != this.value) { // if title was really changed
-        // find current field's id
-        var data = {};
-        var i = this.id.substr(15);
-
-        data.pk = plates[i].pk;
-        data["csrfmiddlewaretoken"] = csrf_token;
-        data.floor = plates[i].fields.floor;
-        data.type = plates[i].fields.type;
-        data.title = this.value;
-        var url = '/catalog/set_plate/';
-        ajaxPostFloor(data, url, "change title of the plate from " + plates[i].fields.title + " to " + this.value);
-      }
-    });
-
-    //set the event listener for radio choice
-    currentInput = document.getElementById("selectPlateField" + String(i));
-    currentInput.addEventListener("change", function (e) {
-      plateId = this.id.substr(16);
-    });
-  }
-}
 
 document.addEventListener('getFloors', function (e) {
   floorInputFieldUpdate();
 }, false);
 
-document.addEventListener('getPlates', function (e) {
-  plateInputFieldUpdate();
-}, false);
 
 $('#add').click(function () {
-  for (var i = 0; i < $("[name='plate_type']").length; i++) {
-    if ($("[name='plate_type']")[i].checked) {
-      plateType = $("[name='plate_type']")[i].value;
-      console.log("plateType =  ", plateType);
-    }
-  }
+  // for (var i = 0; i < $("[name='plate_type']").length; i++) {
+  //   if ($("[name='plate_type']")[i].checked) {
+  //     plateType = $("[name='plate_type']")[i].value;
+  //     console.log("plateType =  ", plateType);
+  //   }
+  // }
 
 });
 
@@ -985,10 +960,11 @@ function floorInputFieldUpdate() {
   addFloorInputTable();
 }
 
-function plateInputFieldUpdate() {
-  $(".selectPlateField").remove();
-  $(".PlateTitleInput").remove();
-  $(".PlateTypeInput").remove();
-  $(".PlateFloorInput").remove();
-  addPlatesInputTable();
+function defineSelectedPlateType() {
+  for (var i = 0; i < $("[name='plate_type']").length; i++) {
+    if ($("[name='plate_type']")[i].checked) {
+      plateType = $("[name='plate_type']")[i].value;
+    }
+  }
 }
+
