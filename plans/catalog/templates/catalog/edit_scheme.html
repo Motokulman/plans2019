@@ -53,6 +53,7 @@
         <button id="wall" type="button" class="btn btn-light">Wall</button>
         <button id="rounded_wall" type="button" class="btn btn-light">Rounded wall</button>
         <button id="plate" type="button" class="btn btn-light">Plate</button>
+        <button id="aperture" type="button" class="btn btn-light">Aperture</button>
 
       </div>
       <button id="add" type="button" class="btn btn-light">Add</button>
@@ -77,11 +78,20 @@
         <label><input type="radio" value="hollow_plates" name="plate_type" />Плиты ПК</label>
       </form>
 
+      <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
+          Запустить модальное окно
+        </button>
+
     </div>
 
   </div>
+
+  {% include "catalog/aperture_form.html" %}
 </div>
+
+
 
 {% load static %}
 <script type="text/javascript" src="{% static 'js/canvas.js' %}"></script>
 {% endblock %}
+

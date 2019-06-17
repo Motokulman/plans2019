@@ -1,0 +1,41 @@
+<!-- Модальное окно -->
+<div class="modal fade" id="apertureModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+
+        <h4 class="modal-title" id="myModalLabel">Aperture</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="aperture_form" action="/catalog/add_aperture/" method="post"> 
+          {% csrf_token %}
+          <label><input id="selected_element_id"  type="number" />id</label>
+          <select id="aperture_fill" name="aperture_fill">
+            <option value="window">window</option>
+            <option value="door">door</option>
+            <option value="empty">empty</option>
+            <option value="combined">combined</option>
+          </select>
+          <label for="aperture_fill">Заполнение проема</label>
+          <label><input id="aperture_radius" type="number" value="0"/>Радиус круглого проема</label>
+          <label><input id="aperture_maxL" type="number" value="0"/>Ширина сверху</label>
+          <label><input id="aperture_maxH" type="number" value="0"/>Высота макс</label>
+          <label><input id="aperture_h" type="number" value="0"/>Высота меньшая</label>
+          <label><input id="aperture_l1" type="number" value="0"/>Ширина меньшая 1</label>
+          <label><input id="aperture_l2" type="number" value="0"/>Ширина меньшая 2</label>
+          <label><input id="aperture_ld" type="number" value="0"/>Ширина двери в комби</label>
+          <!-- <br>
+          <input type="submit" value="OK"> -->
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button"  class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" id="aperture_form_submit" class="btn btn-primary" data-dismiss="modal">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>

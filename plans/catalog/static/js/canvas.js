@@ -16,6 +16,7 @@ var getPlatesEvent = new Event('getPlates');
 var elementLineWidth = 3;
 var guideLineWidth = 1;
 var selectedTool = "none";
+var selectedElement;
 var plan_id = document.getElementById('canvas_form').name;
 var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
 var paddingX;
@@ -47,6 +48,7 @@ var typeOld;
 var colorMap = new Map([["universal", "#90EE90"], ["by_soil", "#2F4F4F"], ["wood", "#BDB76B"], ["hanging_monolith", "#FF4500"], ["hollow_plates", "#FF00FF"]]);
 var color;
 var plateType;
+var stickPixels = 3;
 
 
 ctx.lineCap = 'square';
@@ -61,7 +63,7 @@ function drawExisted(data, paddingX, paddingY) {
     ctx.stroke();
 
   }
-  console.log("allPlatesDraw = ", );
+  // console.log("allPlatesDraw = ");
   allPlatesDraw();
 
 }
@@ -79,6 +81,7 @@ function getElements() {
     success: function (data) {
       existedElements = JSON.parse(data);
       console.log("OK Getting stored elements");
+
       //raise event when the reqiest recieved and we can draw existed elements
       document.dispatchEvent(getElementsEvent);
       // add an input fields
@@ -91,6 +94,8 @@ function getElements() {
         xAxisesSet.add(item.fields.x1);
         yAxisesSet.add(item.fields.y0);
         yAxisesSet.add(item.fields.y1);
+        //   console.log("item = ", item);
+        //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
       }
       //transform sets to arrays for sorting
       var xAxisesArray = Array.from(xAxisesSet);
@@ -170,10 +175,10 @@ function getPlatePoints(plateId) {
     cache: true,
     success: function (data) {
       allPlatesPointsArray.push(JSON.parse(data));
-     // console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
+      // console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
       //polygon.draw(JSON.parse(data), color);
       console.log("OK Getting stored plate's points: ", JSON.parse(data));
-    //  console.log("allPlatesPointsArray: ", allPlatesPointsArray);
+      //  console.log("allPlatesPointsArray: ", allPlatesPointsArray);
       //raise event when the reqiest recieved and we can draw existed elements
       //document.dispatchEvent(getPlatePointsEvent);
       allPlatesDraw();
@@ -185,9 +190,9 @@ function getPlatePoints(plateId) {
 }
 
 function allPlatesDraw() {
-  console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
+  //console.log("allPlatesPointsArray[i] = ", allPlatesPointsArray.length);
   for (var i = 0; i < allPlatesPointsArray.length; i++) {
-    
+
     //color = allPlatesPointsArray[i].type;
     console.log("color = ", allPlatesPointsArray);
     polygon.draw(allPlatesPointsArray[i], color);
@@ -306,7 +311,7 @@ document.addEventListener('getPlates', function (e) {
     mousePosArray = [];
 
     for (var i = 0; i < plates.length; i++) {
-    //  console.log("plates[i].id= ", plates[i].pk);
+      //  console.log("plates[i].id= ", plates[i].pk);
       getPlatePoints(plates[i].pk);
     }
 
@@ -363,7 +368,7 @@ var polygon = {
     ctx.fillStyle = c;
     ctx.beginPath();
     ctx.moveTo(arr[0].fields.x, arr[0].fields.y);
-    
+
     for (var i = 1; i < arr.length; i++) {
       ctx.lineTo(arr[i].fields.x, arr[i].fields.y);
       console.log("arr[i].fields.x = ", arr[i].fields.x);
@@ -435,6 +440,17 @@ canvas.addEventListener('mousemove', function (e) {
     drawExisted(existedElements, paddingX, paddingY);
     for (var i = 0; i < mousePosArray.length; i++) {
       point.draw(mousePosArray[i].x, mousePosArray[i].y, 5, color);
+    }
+  }
+  if (selectedTool == "aperture") {
+    clear();
+    sticking(canvas, e, existedElements);
+    drawExisted(existedElements, paddingX, paddingY);
+    //console.log("aperture");
+    var a = defUnderMouseElement();
+    if (a) {
+      //console.log("a = ", a);
+      point.draw(mousePos.x, mousePos.y, 5, "#2F4F4F");
     }
   }
 
@@ -578,6 +594,38 @@ canvas.addEventListener('click', function (e) {
     color = colorMap.get(plateType);
     point.draw(mousePos.x, mousePos.y, 5, color);
   }
+
+  if (selectedTool == "aperture") {
+
+    selectedElement = defUnderMouseElement();
+    // var elementData = {};
+
+
+    if (selectedElement) {
+      // console.log("selectedElement = ", selectedElement);
+      point.draw(mousePos.x, mousePos.y, 5, "#2F4F4F");
+      var modal = document.querySelector("#apertureModal");
+      //console.log("modal = ", modal);
+      $("#apertureModal").modal();
+      var label_element = document.querySelector("#selected_element_id");
+      label_element.setAttribute("value", selectedElement);
+      //console.log("label_element = ", label_element);
+
+    }
+  }
+
+
+  // for (item of existedElements.values()) {
+
+  //   if (twoPointsDist(mousePos.x, mousePos.y, item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)) {
+  //     //  console.log("item = ", item);
+  //     //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
+  //     return item.pk;
+  //   }
+  // }
+
+
+
 });
 
 function ajaxPostPlan(data, url, message) {
@@ -669,6 +717,22 @@ function ajaxPostPlatePoint(data, url, message) {
   });
 }
 
+function ajaxPostAperture(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      console.log("POST OK: ", message);
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
+
 function getMousePos(canvas, e) {
   var rect = canvas.getBoundingClientRect();
   return {
@@ -678,7 +742,7 @@ function getMousePos(canvas, e) {
 }
 
 // Sticking
-var stickPixels = 3;
+
 function sticking(canvas, e, data) {
   mousePos = getMousePos(canvas, e);
   var flagX = false;
@@ -944,14 +1008,46 @@ document.addEventListener('getFloors', function (e) {
 
 
 $('#add').click(function () {
-  // for (var i = 0; i < $("[name='plate_type']").length; i++) {
-  //   if ($("[name='plate_type']")[i].checked) {
-  //     plateType = $("[name='plate_type']")[i].value;
-  //     console.log("plateType =  ", plateType);
-  //   }
-  // }
 
 });
+
+// submit aperture form
+$('#aperture_form_submit').click(function () {
+  var center;
+  for (item of existedElements.values()) {
+    if (item.pk == selectedElement) {
+      center = (mousePos.x - Math.min(item.fields.x0, item.fields.x1) - paddingX) / Math.abs(item.fields.x0 - item.fields.x1);
+      if (!center) {
+        center = (mousePos.y - Math.min(item.fields.y0, item.fields.y1) - paddingY) / Math.abs(item.fields.y0 - item.fields.y1);
+      }
+
+      console.log("center = ", center);
+    }
+  }
+  console.log("$('#selected_element_id').value = ", $('#selected_element_id').val());
+  console.log("$('#aperture_fill').value = ", $('#aperture_fill').val());
+  //$('#selected_element_id').value;
+
+  var data = {};
+  data["csrfmiddlewaretoken"] = csrf_token;
+  data.element = selectedElement;
+  data.filling = $('#aperture_fill').val();
+  data.center = center;
+  data.r = $('#aperture_radius').val();
+  data.maxL = $('#aperture_maxL').val();
+  data.maxH = $('#aperture_maxH').val();
+  data.h = $('#aperture_h').val();
+  data.l1 = $('#aperture_l1').val();
+  data.l2 = $('#aperture_l2').val();
+  data.ld = $('#aperture_ld').val();
+
+  var url = '/catalog/add_aperture/';
+  ajaxPostAperture(data, url, "add aperture")
+  document.getElementById('aperture_form').reset();
+
+});
+
+
 
 function floorInputFieldUpdate() {
   $(".selectFloorField").remove();
@@ -968,3 +1064,36 @@ function defineSelectedPlateType() {
   }
 }
 
+// define distance between two points
+// function twoPointsDist(x0, y0, x1, y1) {
+//   var dist = Math.sqrt(Math.pow((x0 - x1), 2) + Math.pow((y0 - y1), 2));
+//   return dist;
+// }
+
+// define is the point on the line
+function twoPointsDist(x, y, x0, y0, x1, y1) {
+  x = x - paddingX;
+  y = y - paddingY;
+  //console.log("x = ", x);
+  var dist = Math.sqrt(Math.pow((x0 - x1), 2) + Math.pow((y0 - y1), 2));
+  var dist1 = Math.sqrt(Math.pow((x - x0), 2) + Math.pow((y - y0), 2));
+  var dist2 = Math.sqrt(Math.pow((x - x1), 2) + Math.pow((y - y1), 2));
+  // console.log("dist = ", dist);
+  // console.log("dist1 = ", dist1);
+  // console.log("dist2 = ", dist2);
+  if ((dist1 + dist2) - dist < 0.05) {
+    return true;
+  }
+
+}
+
+function defUnderMouseElement() {
+  for (item of existedElements.values()) {
+
+    if (twoPointsDist(mousePos.x, mousePos.y, item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)) {
+      //  console.log("item = ", item);
+      //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
+      return item.pk;
+    }
+  }
+}

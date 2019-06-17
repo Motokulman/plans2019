@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views import generic
-from .models import Plan, Element, Floor, Level, Plate, PlatePoint
+from .models import Plan, Element, Floor, Level, Plate, PlatePoint, Aperture
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.http import HttpResponseRedirect
@@ -246,3 +246,14 @@ def get_plate_points(request):
     d = serializers.serialize('json', v)
 
     return JsonResponse(d, safe=False)
+
+def add_aperture(request):
+    """View function for add aperture for selected element"""
+    return_dict = dict()
+    data = request.POST
+    element = get_object_or_404(Element, pk=data.get("element"))
+
+    e = Aperture(element=element, filling=data.get("filling"), center=data.get("center"), r=data.get("r"), maxL=data.get("maxL"), maxH=data.get("maxH"), h=data.get("h"), l1=data.get("l1"), l2=data.get("l2"), ld=data.get("ld"))
+    e.save(force_insert=True)
+
+    return JsonResponse(return_dict)
