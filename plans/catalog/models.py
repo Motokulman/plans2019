@@ -100,6 +100,7 @@ class PlatePoint(models.Model):
 
 class Aperture(models.Model):
     """Model representing a door, window or through aperture"""
+    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
     element = models.ForeignKey('Element', on_delete=models.CASCADE)
     filling = models.CharField(max_length=20, null=True, blank=True) # which kind of filling: door, window, empty, combined
     center = models.FloatField(null=True, blank=True) # from 0 to 1 where the center on the line

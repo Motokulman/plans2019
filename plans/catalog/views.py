@@ -152,10 +152,12 @@ def add_floor(request):
     plan = get_object_or_404(Plan, pk=data.get("plan"))
 
     # print(data)
-    e = Floor(plan=plan, title=data.get("title"), height=data.get("height"), batch=data.get("batch"), order=data.get("order"), levelFromGroundFloor=data.get("levelFromGroundFloor"))
+    e = Floor(plan=plan, title=data.get("title"), height=data.get("height"), batch=data.get(
+        "batch"), order=data.get("order"), levelFromGroundFloor=data.get("levelFromGroundFloor"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)
+
 
 def get_floors(request):
     """View function for getting all existed floors of the scheme of the specific plan"""
@@ -168,6 +170,7 @@ def get_floors(request):
 
     return JsonResponse(d, safe=False)
 
+
 def set_floor(request):
     """View function for change title or height size of the floor"""
     return_dict = dict()
@@ -178,6 +181,7 @@ def set_floor(request):
     e.save()
 
     return JsonResponse(return_dict)
+
 
 def set_plate(request):
     """View function for change title or height size of the floor"""
@@ -191,16 +195,19 @@ def set_plate(request):
 
     return JsonResponse(return_dict)
 
+
 def add_level(request):
     """View function for add an inner level of the specific plan calculated from specified floor level"""
     return_dict = dict()
     data = request.POST
     plan = get_object_or_404(Plan, pk=data.get("plan"))
 
-    e = Level(plan=plan, title=data.get("title"), floor=data.get("floor"), level=data.get("level"), value=data.get("value"))
+    e = Level(plan=plan, title=data.get("title"), floor=data.get(
+        "floor"), level=data.get("level"), value=data.get("value"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)
+
 
 def add_plate(request):
     """View function for add single floor height of the specific plan"""
@@ -208,10 +215,12 @@ def add_plate(request):
     data = request.POST
     plan = get_object_or_404(Plan, pk=data.get("plan"))
 
-    e = Plate(plan=plan, title=data.get("title"), floor=data.get("floor"), plateType=data.get("plateType"))
+    e = Plate(plan=plan, title=data.get("title"), floor=data.get(
+        "floor"), plateType=data.get("plateType"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)
+
 
 def add_plate_point(request):
     """View function for add single floor height of the specific plan"""
@@ -224,6 +233,7 @@ def add_plate_point(request):
 
     return JsonResponse(return_dict)
 
+
 def get_plates(request):
     """View function for getting all existed plates of the scheme of the specific plan"""
 
@@ -235,7 +245,7 @@ def get_plates(request):
 
     return JsonResponse(d, safe=False)
 
-    
+
 def get_plate_points(request):
     """View function for getting all existed plate's points of the scheme of the specific plan"""
 
@@ -247,13 +257,28 @@ def get_plate_points(request):
 
     return JsonResponse(d, safe=False)
 
+
+def get_apertures(request):
+    """View function for getting all existed apertures of the scheme of the specific plan"""
+
+    data = request.GET
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+
+    v = Aperture.objects.filter(plan=plan)
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)
+
+
 def add_aperture(request):
     """View function for add aperture for selected element"""
     return_dict = dict()
     data = request.POST
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
     element = get_object_or_404(Element, pk=data.get("element"))
 
-    e = Aperture(element=element, filling=data.get("filling"), center=data.get("center"), r=data.get("r"), maxL=data.get("maxL"), maxH=data.get("maxH"), h=data.get("h"), l1=data.get("l1"), l2=data.get("l2"), ld=data.get("ld"))
+    e = Aperture(plan=plan, element=element, filling=data.get("filling"), center=data.get("center"), r=data.get("r"), maxL=data.get(
+        "maxL"), maxH=data.get("maxH"), h=data.get("h"), l1=data.get("l1"), l2=data.get("l2"), ld=data.get("ld"))
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)

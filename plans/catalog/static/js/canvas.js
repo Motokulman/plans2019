@@ -7,12 +7,14 @@ var mousePos;
 var existedElements;
 var floors;
 var plates;
+var apertures;
 var plateId;
 var last_plate; // when draw new plate, first added new plate and then points of this plate. You need to know last added plate for adding points of this new plate
 var plan;
 var getElementsEvent = new Event('getElements'); // event when ajax returns data
 var getFloorsEvent = new Event('getFloors');
 var getPlatesEvent = new Event('getPlates');
+var getAperturesEvent = new Event('getApertures');
 var elementLineWidth = 3;
 var guideLineWidth = 1;
 var selectedTool = "none";
@@ -120,6 +122,28 @@ function getElements() {
 }
 
 // get existed floors of this plan from DB
+function getApertures() {
+  var data = {};
+  data.plan = plan_id;
+  var url = '/catalog/get_apertures/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    success: function (data) {
+      apertures = JSON.parse(data);
+      console.log("OK Getting stored apertures");
+      console.log("apertures = ", apertures);
+      document.dispatchEvent(getAperturesEvent);//raise event when the reqiest recieved and we can draw existed elements 
+    },
+    error: function () {
+      console.log("Getting stored apertures error");
+    }
+  });
+}
+
+// get existed floors of this plan from DB
 function getFloors() {
   var data = {};
   data.plan = plan_id;
@@ -199,6 +223,39 @@ function allPlatesDraw() {
   }
 }
 
+function aperturesDraw() {
+  var x;
+  var y;
+  for (var i = 0; i < apertures.length; i++) {
+    for (var j = 0; j < existedElements.length; j++)  {
+
+      if (apertures[i].fields.element == existedElements[j].pk) {
+        // console.log("совпало = ", existedElements[j].pk);
+        // console.log("existedElements[j].fields.x0 = ", existedElements[j].fields.x0);
+        
+        x = paddingX + Math.min(existedElements[j].fields.x0, existedElements[j].fields.x1) + Math.abs(existedElements[j].fields.x0 - existedElements[j].fields.x1) * apertures[i].fields.center;
+        y = paddingY + Math.min(existedElements[j].fields.y0, existedElements[j].fields.y1) + Math.abs(existedElements[j].fields.y0 - existedElements[j].fields.y1) * apertures[i].fields.center;
+        if (apertures[i].fields.filling == "empty") {
+          aperture.draw_empty(x, y);
+        } else if (apertures[i].fields.filling == "window") {
+          aperture.draw_window(x, y);
+        } else if (apertures[i].fields.filling == "door") {
+          aperture.draw_door(x, y);
+        } else if (apertures[i].fields.filling == "combined") {
+          aperture.draw_combined(x, y);
+        }
+      }
+    }
+  }
+};
+//console.log("apertures[i].fields = ", apertures[i].fields);
+
+// for (var i = 0; i < existedElements.length; i++) {
+//   data.pk = existedElements[i].pk;
+//   data.x0 = existedElements[i].fields.x0 + delta;
+//   data.x1 = existedElements[i].fields.x1 + delta;
+
+
 
 function addSizeInput(top, left, inputField, id, size) {
   var elem = document.createElement("input");
@@ -272,6 +329,7 @@ $(document).ready(function () {
   getFloors();
   getPlates();
   defineSelectedPlateType();
+  getApertures();
 });
 
 // draw existed elements when GET request returned saved elements
@@ -352,6 +410,38 @@ var point = {
     ctx.fillStyle = c;// "#333333";
     ctx.fill();
     ctx.closePath();
+  }
+};
+
+// draw apertures
+
+var aperture = {
+  draw_empty: function (x, y) {
+    var h = 10;
+    ctx.strokeRect(x - h / 2, y - h / 2, h, h);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x - h / 2, y - h / 2, h, h);
+  },
+
+  draw_window: function (x, y) {
+    var h = 10;
+    ctx.strokeRect(x - h / 2, y - h / 2, h, h);
+    ctx.fillStyle = "#0000ff";
+    ctx.fillRect(x - h / 2, y - h / 2, h, h);
+  },
+
+  draw_door: function (x, y) {
+    var h = 10;
+    ctx.strokeRect(x - h / 2, y - h / 2, h, h);
+    ctx.fillStyle = "#333333";
+    ctx.fillRect(x - h / 2, y - h / 2, h, h);
+  },
+
+  draw_combined: function (x, y) {
+    var h = 10;
+    ctx.strokeRect(x - h / 2, y - h / 2, h, h);
+    ctx.fillStyle = "#ffff00";
+    ctx.fillRect(x - h / 2, y - h / 2, h, h);
   }
 };
 
@@ -446,6 +536,7 @@ canvas.addEventListener('mousemove', function (e) {
     clear();
     sticking(canvas, e, existedElements);
     drawExisted(existedElements, paddingX, paddingY);
+    aperturesDraw();
     //console.log("aperture");
     var a = defUnderMouseElement();
     if (a) {
@@ -726,6 +817,7 @@ function ajaxPostAperture(data, url, message) {
     async: false,
     success: function (data) {
       console.log("POST OK: ", message);
+      getApertures();
     },
     error: function () {
       console.log("POST error: ", message);
@@ -1007,6 +1099,12 @@ document.addEventListener('getFloors', function (e) {
 }, false);
 
 
+document.addEventListener('getApertures', function (e) {
+  console.log("getApertures event")
+  aperturesDraw();
+}, false);
+
+
 $('#add').click(function () {
 
 });
@@ -1030,6 +1128,7 @@ $('#aperture_form_submit').click(function () {
 
   var data = {};
   data["csrfmiddlewaretoken"] = csrf_token;
+  data.plan = plan_id;
   data.element = selectedElement;
   data.filling = $('#aperture_fill').val();
   data.center = center;

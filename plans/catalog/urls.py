@@ -36,5 +36,6 @@ urlpatterns += [
     path('get_plates/', views.get_plates, name='get_plates'),
     path('get_plate_points/', views.get_plate_points, name='get_plate_points'),
     path('add_aperture/', views.add_aperture, name='add_aperture'),
+    path('get_apertures/', views.get_apertures, name='get_apertures'),
 
 ]
