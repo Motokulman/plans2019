@@ -37,5 +37,10 @@ urlpatterns += [
     path('get_plate_points/', views.get_plate_points, name='get_plate_points'),
     path('add_aperture/', views.add_aperture, name='add_aperture'),
     path('get_apertures/', views.get_apertures, name='get_apertures'),
+    path('add_point/', views.add_point, name='add_point'),
+    path('get_points/', views.get_points, name='get_points'),
+    path('set_point/', views.set_point, name='set_point'),
+    path('add_grillage/', views.add_grillage, name='add_grillage'),
+    path('get_grillages/', views.get_grillages, name='get_grillages'),
 
 ]

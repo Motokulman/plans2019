@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views import generic
-from .models import Plan, Element, Floor, Level, Plate, PlatePoint, Aperture
+from .models import Plan, Element, Floor, Level, Plate, PlatePoint, Aperture, Point, Grillage
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.http import HttpResponseRedirect
@@ -282,3 +282,61 @@ def add_aperture(request):
     e.save(force_insert=True)
 
     return JsonResponse(return_dict)
+
+
+def add_point(request):
+    """  """
+    return_dict = dict()
+    data = request.POST
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+
+    e = Point(plan=plan, x=data.get("x"), y=data.get("y"))
+    e.save(force_insert=True)
+
+    return JsonResponse(return_dict)
+
+def get_points(request):
+    """ """
+
+    data = request.GET
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+
+    v = Point.objects.filter(plan=plan)
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)
+
+def set_point(request):
+    """  """
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(Point, pk=data.get("pk"))
+    e.x = data.get("x")
+    e.y = data.get("y")
+    e.save()
+
+    return JsonResponse(return_dict)
+
+def add_grillage(request):
+    """  """
+    return_dict = dict()
+    data = request.POST
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+    point1 = get_object_or_404(Point, pk=data.get("point1"))
+    point2 = get_object_or_404(Point, pk=data.get("point2"))
+
+    e = Grillage(plan=plan, point1=point1, point2=point2, width=data.get("width"))
+    e.save(force_insert=True)
+
+    return JsonResponse(return_dict)
+
+def get_grillages(request):
+    """ """
+
+    data = request.GET
+    plan = get_object_or_404(Plan, pk=data.get("plan"))
+
+    v = Grillage.objects.filter(plan=plan)
+    d = serializers.serialize('json', v)
+
+    return JsonResponse(d, safe=False)

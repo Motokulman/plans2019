@@ -54,9 +54,25 @@
         <button id="rounded_wall" type="button" class="btn btn-light">Rounded wall</button>
         <button id="plate" type="button" class="btn btn-light">Plate</button>
         <button id="aperture" type="button" class="btn btn-light">Aperture</button>
+        <button id="foundation" type="button" class="btn btn-light">Foundation</button>
 
       </div>
       <button id="add" type="button" class="btn btn-light">Add</button>
+
+      <h3>Ростверк</h3>
+      <form id="grillage_form">
+          <input type="radio" value="line" checked name="grillage_type" />
+          <select id="grillage_width" name="grillage_width">
+              <option value="-1">adaptive</option>
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="640">640</option>
+            </select>
+            <label for="grillage_width">Ростверк</label>
+            <label><input type="radio" value="pillar" name="grillage_type" />Столбик</label>
+            <label><input type="radio" value="plate" name="grillage_type" />Плита</label>
+      </form>
+      
       <h3>Тип стены</h3>
       <form id="wall_type_form">
         <label><input type="radio" value="a_type" checked name="wall_type" />Тип А</label>
@@ -65,6 +81,7 @@
         <label><input type="radio" value="glass" name="wall_type" />Витраж</label>
         <label><input type="radio" value="railing" name="wall_type" />Ограждение</label>
       </form>
+      
       <h3>Этаж</h3>
       <form id="floor_form">
         <table>

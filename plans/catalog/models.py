@@ -18,6 +18,27 @@ class Plan(models.Model):
         return reverse('plan-detail', args=[str(self.id)])
 
 
+class Point(models.Model):
+    """Point. On points bases all elements"""
+    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
+    x = models.IntegerField() 
+    y = models.IntegerField() 
+
+    def __str__(self):
+        """String for representing the Element object."""
+        return self.plan
+
+class Grillage(models.Model):
+    """Grillage. Line grillage, not plate"""
+    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
+    point1 = models.ForeignKey('Point', on_delete=models.CASCADE, related_name="point1")
+    point2 = models.ForeignKey('Point', on_delete=models.CASCADE, related_name="point2", null=True, blank=True)
+    width = models.CharField(max_length=20)
+
+    def __str__(self):
+        """String for representing the Element object."""
+        return self.plan
+
 class Element(models.Model):
     """Element - it's wall or smth else on the axis. Between axises"""
     plan = models.ForeignKey('Plan', on_delete=models.CASCADE)

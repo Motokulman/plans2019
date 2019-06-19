@@ -5,19 +5,24 @@ var mouseOldPos0;
 var mouseOldPos1;
 var mousePos;
 var existedElements;
+var points;
 var floors;
 var plates;
 var apertures;
+var grillages;
 var plateId;
 var last_plate; // when draw new plate, first added new plate and then points of this plate. You need to know last added plate for adding points of this new plate
 var plan;
 var getElementsEvent = new Event('getElements'); // event when ajax returns data
 var getFloorsEvent = new Event('getFloors');
 var getPlatesEvent = new Event('getPlates');
+var getPointsEvent = new Event('getPoints');
+var getGrillagesEvent = new Event('getGrillages');
 var getAperturesEvent = new Event('getApertures');
 var elementLineWidth = 3;
 var guideLineWidth = 1;
 var selectedTool = "none";
+var underMousePoint;
 var selectedElement;
 var plan_id = document.getElementById('canvas_form').name;
 var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
@@ -70,32 +75,30 @@ function drawExisted(data, paddingX, paddingY) {
 
 }
 
-// get existing elements from DB
-function getElements() {
+function getPoints() {
   var data = {};
   data.plan = plan_id;
-  var url = '/catalog/get_elements/';
+  var url = '/catalog/get_points/';
   $.ajax({
     url: url,
     type: 'GET',
     data: data,
     cache: true,
+    async: false,
     success: function (data) {
-      existedElements = JSON.parse(data);
-      console.log("OK Getting stored elements");
-
+      points = JSON.parse(data);
+      underMousePoint = points[points.length - 1];
+      // console.log("underMousePoint = points[points.length - 1]: ", underMousePoint);
+      console.log("OK Getting stored points: ", points);
       //raise event when the reqiest recieved and we can draw existed elements
-      document.dispatchEvent(getElementsEvent);
+      document.dispatchEvent(getPointsEvent);
       // add an input fields
       $(".SizeInput").remove();
-      //var i = 0;
       let xAxisesSet = new Set(); // use Set for storing unique sizes only
       let yAxisesSet = new Set();
-      for (item of existedElements.values()) {
-        xAxisesSet.add(item.fields.x0);
-        xAxisesSet.add(item.fields.x1);
-        yAxisesSet.add(item.fields.y0);
-        yAxisesSet.add(item.fields.y1);
+      for (item of points.values()) {
+        xAxisesSet.add(item.fields.x);
+        yAxisesSet.add(item.fields.y);
         //   console.log("item = ", item);
         //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
       }
@@ -116,7 +119,82 @@ function getElements() {
       addInputFieldsBetweenAxisesX(xAxisesArray);
     },
     error: function () {
-      console.log("Getting stored elements error");
+      console.log("Getting stored points error");
+    }
+  });
+}
+
+// get existing elements from DB
+function getElements() {
+  // var data = {};
+  // data.plan = plan_id;
+  // var url = '/catalog/get_elements/';
+  // $.ajax({
+  //   url: url,
+  //   type: 'GET',
+  //   data: data,
+  //   cache: true,
+  //   success: function (data) {
+  //     existedElements = JSON.parse(data);
+  //     console.log("OK Getting stored elements");
+
+  //     //raise event when the reqiest recieved and we can draw existed elements
+  //     document.dispatchEvent(getElementsEvent);
+  //     // add an input fields
+  //     $(".SizeInput").remove();
+  //     //var i = 0;
+  //     let xAxisesSet = new Set(); // use Set for storing unique sizes only
+  //     let yAxisesSet = new Set();
+  //     for (item of existedElements.values()) {
+  //       xAxisesSet.add(item.fields.x0);
+  //       xAxisesSet.add(item.fields.x1);
+  //       yAxisesSet.add(item.fields.y0);
+  //       yAxisesSet.add(item.fields.y1);
+  //       //   console.log("item = ", item);
+  //       //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
+  //     }
+  //     //transform sets to arrays for sorting
+  //     var xAxisesArray = Array.from(xAxisesSet);
+  //     var yAxisesArray = Array.from(yAxisesSet);
+  //     //sorting arrays
+  //     //first, function for comparing
+  //     function compareNumeric(a, b) {
+  //       if (a > b) return 1;
+  //       if (a < b) return -1;
+  //     }
+  //     // now sort
+  //     yAxisesArray.sort(compareNumeric);
+  //     xAxisesArray.sort(compareNumeric);
+
+  //     addInputFieldsBetweenAxisesY(yAxisesArray);
+  //     addInputFieldsBetweenAxisesX(xAxisesArray);
+  //   },
+  //   error: function () {
+  //     console.log("Getting stored elements error");
+  //   }
+  // });
+}
+
+// get existed grillages of this plan from DB
+function getGrillages() {
+  var data = {};
+  data.plan = plan_id;
+  var url = '/catalog/get_grillages/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    async: false,
+    success: function (data) {
+      grillages = JSON.parse(data);
+      console.log("OK Getting grillages");
+      console.log("grillages = ", grillages);
+      document.dispatchEvent(getGrillagesEvent);//raise event when the reqiest recieved and we can draw existed elements 
+      drawGrillages();
+    },
+    error: function () {
+      console.log("Getting grillages error");
     }
   });
 }
@@ -227,12 +305,12 @@ function aperturesDraw() {
   var x;
   var y;
   for (var i = 0; i < apertures.length; i++) {
-    for (var j = 0; j < existedElements.length; j++)  {
+    for (var j = 0; j < existedElements.length; j++) {
 
       if (apertures[i].fields.element == existedElements[j].pk) {
         // console.log("совпало = ", existedElements[j].pk);
         // console.log("existedElements[j].fields.x0 = ", existedElements[j].fields.x0);
-        
+
         x = paddingX + Math.min(existedElements[j].fields.x0, existedElements[j].fields.x1) + Math.abs(existedElements[j].fields.x0 - existedElements[j].fields.x1) * apertures[i].fields.center;
         y = paddingY + Math.min(existedElements[j].fields.y0, existedElements[j].fields.y1) + Math.abs(existedElements[j].fields.y0 - existedElements[j].fields.y1) * apertures[i].fields.center;
         if (apertures[i].fields.filling == "empty") {
@@ -294,10 +372,13 @@ function getPlan() {
     type: 'GET',
     data: data,
     cache: true,
+    async: false,
     success: function (data) {
       plan = JSON.parse(data);
       paddingX = plan[0].fields.paddingX;
       paddingY = plan[0].fields.paddingY;
+      console.log("paddingX = ", paddingX);
+      console.log("paddingY = ", paddingY);
       dataPlan = {};
       dataPlan.plan = plan_id;
       dataPlan["csrfmiddlewaretoken"] = csrf_token;
@@ -325,7 +406,9 @@ function getPlan() {
 // getting existing elements when just open scheme
 $(document).ready(function () {
   getPlan();
-  getElements();
+  getPoints();
+  getGrillages();
+  // getElements();
   getFloors();
   getPlates();
   defineSelectedPlateType();
@@ -494,7 +577,33 @@ function clear() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+//////////////////////////////////////////////////////////////  MOUSE MOVE //////////////////////
 canvas.addEventListener('mousemove', function (e) {
+  mousePos = getMousePos(canvas, e);
+  if (selectedTool == "foundation") {
+    clear();
+    drawGrillages();
+    //sticking(canvas, e, existedElements);
+    underMousePoint = defUnderMousePoint();
+    // if (underMousePoint) {
+    //   console.log("underMousePoint = ", underMousePoint);
+    //   point.draw(underMousePoint.fields.x + paddingX, underMousePoint.fields.y + paddingY, 5, "234223");
+    // }
+    //console.log("mousePos.x =", mousePos.x);
+
+    // if (running) {
+    //   clear();
+    //   sticking(canvas, e, existedElements);
+    //   drawExisted(existedElements, paddingX, paddingY);
+    //   elementLine.draw();
+    // } else {
+    //   clear();
+    //   sticking(canvas, e, existedElements);
+    //   drawExisted(existedElements, paddingX, paddingY);
+    // }
+  }
+
+
   if (selectedTool == "wall") {
     if (running) {
       clear();
@@ -548,8 +657,60 @@ canvas.addEventListener('mousemove', function (e) {
 
 });
 
+//////////////////////////////////////////////////////////////  MOUSE CLICK //////////////////////
 // clicking handler
 canvas.addEventListener('click', function (e) {
+  // if it first point
+  if (points.length == 0) {
+    // post paddings into plan
+    paddingX = mousePos.x;
+    paddingY = mousePos.y;
+    dataPlan = {};
+    dataPlan.plan = plan_id;
+    dataPlan["csrfmiddlewaretoken"] = csrf_token;
+    url = '/catalog/set_plan_paddingY/';
+    dataPlan.paddingY = paddingY;
+    ajaxPostPlan(dataPlan, url, "first paddingY");
+    url = '/catalog/set_plan_paddingX/';
+    dataPlan.paddingX = paddingX;
+    ajaxPostPlan(dataPlan, url, "first paddingX");
+  }
+
+  if (!underMousePoint) {
+    var dataNewPoint = {};
+    dataNewPoint.plan = plan_id;
+    dataNewPoint.x = mousePos.x - paddingX;
+    dataNewPoint.y = mousePos.y - paddingY;
+    dataNewPoint["csrfmiddlewaretoken"] = csrf_token;
+    url = '/catalog/add_point/';
+    ajaxPostPoint(dataNewPoint, url, "add point");
+    defUnderMousePoint();
+  }
+
+  if (selectedTool == "foundation") {
+    //   console.log("selectedTool == foundation ");
+    if (grillageType == "pillar") {
+
+      data = {};
+      data.plan = plan_id;
+      data.width = grillageWidth;
+      data["csrfmiddlewaretoken"] = csrf_token;
+      url = '/catalog/add_grillage/';
+
+      if (underMousePoint) {
+        data.point1 = underMousePoint.pk;
+        data.point2 = underMousePoint.pk;
+        console.log("data grillage = ", data);
+        ajaxPostGrillage(data, url, "add grillage");
+      } else {
+        alert("Не записалась точка!");
+      }
+
+    }
+
+  }
+
+
   if (selectedTool == "wall") {
     if (!running) {
       mouseOldPos0 = mousePos;
@@ -798,9 +959,42 @@ function ajaxPostPlatePoint(data, url, message) {
     cache: false,
     async: false,
     success: function (data) {
-      //getPlates();
+      getPoints();
       console.log("POST OK: ", message);
 
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
+
+function ajaxPostPoint(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      getPoints();
+      console.log("POST OK: ", message);
+    },
+    error: function () {
+      console.log("POST error: ", message);
+    }
+  });
+}
+
+function ajaxPostGrillage(data, url, message) {
+  $.ajax({
+    url: url,
+    type: 'POST',
+    data: data,
+    cache: false,
+    async: false,
+    success: function (data) {
+      console.log("POST OK: ", message);
     },
     error: function () {
       console.log("POST error: ", message);
@@ -893,6 +1087,9 @@ function sticking(canvas, e, data) {
 $('#selector button').click(function () {
   $(this).addClass('active').siblings().removeClass('active');
   selectedTool = this.id;
+  if (selectedTool == "foundation") {
+    defineSelectedGrillageType();
+  }
 });
 
 wall_type_form.addEventListener('change', function (evt) {
@@ -903,6 +1100,19 @@ plate_type_form.addEventListener('change', function (evt) {
   plateType = event.target.value;
 })
 
+
+grillage_width.addEventListener('change', function (evt) {
+  grillageWidth = event.target.value;
+  //  console.log("grillageWidth = ", grillageWidth)
+})
+
+grillage_form.addEventListener('change', function (evt) {
+  grillageType = event.target.value;
+  if (grillageType == "line") {
+    grillageWidth = $("[name='grillage_width']")[0].value;
+  }
+  // console.log("grillageType = ", grillageType)
+})
 
 // floor_form.addEventListener('change', function (evt) {
 //   console.log("event.target.value = ", event.target.value);
@@ -1163,6 +1373,25 @@ function defineSelectedPlateType() {
   }
 }
 
+// function defineSelectedGrillageType() {
+//   for (var i = 0; i < $("[name='grillage_type']").length; i++) {
+//     if ($("[name='grillage_type']")[i].checked) {
+//       grillageType = $("[name='grillage_type']")[i].value;
+//     }
+//   }
+// }
+
+function defineSelectedGrillageType() {
+  for (var i = 0; i < $("[name='grillage_type']").length; i++) {
+    if ($("[name='grillage_type']")[i].checked) {
+      grillageType = $("[name='grillage_type']")[i].value;
+    }
+  }
+  if (grillageType == "line") {
+    grillageWidth = $("[name='grillage_width']")[0].value;
+  }
+}
+
 // define distance between two points
 // function twoPointsDist(x0, y0, x1, y1) {
 //   var dist = Math.sqrt(Math.pow((x0 - x1), 2) + Math.pow((y0 - y1), 2));
@@ -1196,3 +1425,56 @@ function defUnderMouseElement() {
     }
   }
 }
+
+
+function defUnderMousePoint() {
+  // console.log("defUnderMousePoint: ", points);
+  for (item of points.values()) {
+    if ((mousePos.x - item.fields.x - paddingX < stickPixels) && (mousePos.y - item.fields.y - paddingY < stickPixels)) {
+      point.draw(item.fields.x + paddingX, item.fields.y + paddingY, 5, "423423");
+      // console.log("UnderMousePointt: ", item);
+      return item;
+    }
+  }
+}
+
+function drawGrillages() {
+  for (item of grillages.values()) {
+    if (item.fields.point1 == item.fields.point2) {
+      for (pitem of points.values()) {
+        if (pitem.pk == item.fields.point1) {
+          var h = 5;
+          ctx.strokeRect(pitem.fields.x + paddingX - h / 2, pitem.fields.y + paddingY - h / 2, h, h);
+          ctx.fillStyle = "#234355";
+          ctx.fillRect(pitem.fields.x + paddingX - h / 2, pitem.fields.y + paddingY - h / 2, h, h);
+        }
+      }
+    }
+  }
+}
+
+// function drawUnderMousePoint() {
+
+// }
+
+
+// // draw new line
+// var elementLine = {
+//   draw: function () {
+//     ctx.beginPath();
+//     ctx.moveTo(mouseOldPos0.x, mouseOldPos0.y);
+//     ctx.lineTo(mousePos.x, mousePos.y);
+//     ctx.stroke();
+//   }
+// };
+
+// // draw point
+// var point = {
+//   draw: function (x, y, r, c) {
+//     ctx.beginPath();
+//     ctx.arc(x, y, r, 0, 2 * Math.PI);
+//     ctx.fillStyle = c;// "#333333";
+//     ctx.fill();
+//     ctx.closePath();
+//   }
+// };
