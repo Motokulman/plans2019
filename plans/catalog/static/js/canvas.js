@@ -18,6 +18,7 @@ var getFloorsEvent = new Event('getFloors');
 var getPlatesEvent = new Event('getPlates');
 var getPointsEvent = new Event('getPoints');
 var getGrillagesEvent = new Event('getGrillages');
+var getLinedGrillagesEvent = new Event('getLinedGrillages');
 var getAperturesEvent = new Event('getApertures');
 var elementLineWidth = 3;
 var guideLineWidth = 1;
@@ -45,6 +46,7 @@ var url;
 var wallType = "a_type";
 var floorId;
 var mousePosArray = [];
+var pointsArray = [];
 var allPlatesPointsArray = [];
 
 // settings for size inputs
@@ -195,6 +197,30 @@ function getGrillages() {
     },
     error: function () {
       console.log("Getting grillages error");
+    }
+  });
+}
+
+// get existed grillages of this plan from DB
+function getLinedGrillages() {
+  var data = {};
+  data.plan = plan_id;
+  var url = '/catalog/get_lined_grillages/';
+  $.ajax({
+    url: url,
+    type: 'GET',
+    data: data,
+    cache: true,
+    async: false,
+    success: function (data) {
+      linedGrillages = JSON.parse(data);
+      console.log("OK Getting lined grillages");
+      console.log("linedgrillages = ", linedGrillages);
+      document.dispatchEvent(getLinedGrillagesEvent);//raise event when the reqiest recieved and we can draw existed elements 
+      drawGrillages();
+    },
+    error: function () {
+      console.log("Getting lined grillages error");
     }
   });
 }
@@ -683,30 +709,65 @@ canvas.addEventListener('click', function (e) {
     dataNewPoint.y = mousePos.y - paddingY;
     dataNewPoint["csrfmiddlewaretoken"] = csrf_token;
     url = '/catalog/add_point/';
-    ajaxPostPoint(dataNewPoint, url, "add point");
-    defUnderMousePoint();
+    ajaxPostPoint(dataNewPoint, url, "add point with new coords");
+
+  } else {
+    var dataNewPoint = {};
+    dataNewPoint.plan = plan_id;
+    dataNewPoint.x = underMousePoint.fields.x - paddingX;
+    dataNewPoint.y = underMousePoint.fields.y - paddingY;
+    dataNewPoint["csrfmiddlewaretoken"] = csrf_token;
+    url = '/catalog/add_point/';
+    ajaxPostPoint(dataNewPoint, url, "add point with coords underlied point");
   }
+  //defUnderMousePoint();
 
   if (selectedTool == "foundation") {
     //   console.log("selectedTool == foundation ");
-    if (grillageType == "pillar") {
-
-      data = {};
-      data.plan = plan_id;
-      data.width = grillageWidth;
-      data["csrfmiddlewaretoken"] = csrf_token;
-      url = '/catalog/add_grillage/';
-
-      if (underMousePoint) {
-        data.point1 = underMousePoint.pk;
-        data.point2 = underMousePoint.pk;
-        console.log("data grillage = ", data);
-        ajaxPostGrillage(data, url, "add grillage");
+    if (grillageType == "lined") {
+      if (pointsArray.length == 0) {
+        pointsArray.push(points[points.length - 1]);
       } else {
-        alert("Не записалась точка!");
+        // add new grillage
+        var data = {};
+        data.plan = plan_id;
+        data.width = grillageWidth;
+        dataNewPoint["csrfmiddlewaretoken"] = csrf_token;
+        url = '/catalog/add_lined_grillage/';
+        ajaxPostLinedGrillage(dataNewPoint, url, "add lined grillage");
+
+        // add new point as point of grillage
+        var data = {};
+        data.linedGrillage = linedGrillages[linedGrillages.length - 1];
+        data.width = grillageWidth;
+        dataNewPoint["csrfmiddlewaretoken"] = csrf_token;
+        url = '/catalog/add_lined_grillage/';
+        ajaxPostLinedGrillage(dataNewPoint, url, "add lined grillage");
+
       }
 
     }
+
+
+
+    // if (grillageType == "pillar") {
+
+    //   data = {};
+    //   data.plan = plan_id;
+    //   data.width = grillageWidth;
+    //   data["csrfmiddlewaretoken"] = csrf_token;
+    //   url = '/catalog/add_grillage/';
+
+    //   if (underMousePoint) {
+    //     data.point1 = underMousePoint.pk;
+    //     data.point2 = underMousePoint.pk;
+    //     console.log("data grillage = ", data);
+    //     ajaxPostGrillage(data, url, "add grillage");
+    //   } else {
+    //     alert("Не записалась точка!");
+    //   }
+
+    // }
 
   }
 
@@ -986,7 +1047,7 @@ function ajaxPostPoint(data, url, message) {
   });
 }
 
-function ajaxPostGrillage(data, url, message) {
+function ajaxPostLinedGrillage(data, url, message) {
   $.ajax({
     url: url,
     type: 'POST',
@@ -995,6 +1056,7 @@ function ajaxPostGrillage(data, url, message) {
     async: false,
     success: function (data) {
       console.log("POST OK: ", message);
+      getLinedGrillages();
     },
     error: function () {
       console.log("POST error: ", message);
@@ -1437,6 +1499,17 @@ function defUnderMousePoint() {
     }
   }
 }
+
+// function defLastAddedPoint() {
+//   // console.log("defUnderMousePoint: ", points);
+//   for (item of points.values()) {
+//     if ((mousePos.x - item.fields.x - paddingX < stickPixels) && (mousePos.y - item.fields.y - paddingY < stickPixels)) {
+//       point.draw(item.fields.x + paddingX, item.fields.y + paddingY, 5, "423423");
+//       // console.log("UnderMousePointt: ", item);
+//       return points[points.length - 1];
+//     }
+//   }
+// }
 
 function drawGrillages() {
   for (item of grillages.values()) {

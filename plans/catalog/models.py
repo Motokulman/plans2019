@@ -28,12 +28,38 @@ class Point(models.Model):
         """String for representing the Element object."""
         return self.plan
 
-class Grillage(models.Model):
+class LinedGrillage(models.Model):
     """Grillage. Line grillage, not plate"""
     plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
-    point1 = models.ForeignKey('Point', on_delete=models.CASCADE, related_name="point1")
-    point2 = models.ForeignKey('Point', on_delete=models.CASCADE, related_name="point2", null=True, blank=True)
     width = models.CharField(max_length=20)
+
+    def __str__(self):
+        """String for representing the Element object."""
+        return self.plan
+
+class PlatedGrillage(models.Model):
+    """Grillage. Line grillage, not plate"""
+    plan = models.ForeignKey('Plan', on_delete=models.CASCADE)
+    conjoint = models.BooleanField(default=False) # if true it conjoint with surrounded grillages and have their height
+
+    def __str__(self):
+        """String for representing the Element object."""
+        return self.plan
+
+class LinedGrillagePoint(models.Model):
+    """Grillage. Line grillage, not plate"""
+    linedGrillage = models.ForeignKey('LinedGrillage', on_delete=models.CASCADE)
+    point1 = models.ForeignKey('Point', on_delete=models.CASCADE)
+    point2 = models.ForeignKey('Point', on_delete=models.CASCADE)
+
+    def __str__(self):
+        """String for representing the Element object."""
+        return self.plan
+
+class PlatedGrillagePoint(models.Model):
+    """Grillage. Line grillage, not plate"""
+    platedGrillage = models.ForeignKey('PlatedGrillage', on_delete=models.CASCADE)
+    point = models.ForeignKey('Point', on_delete=models.CASCADE)
 
     def __str__(self):
         """String for representing the Element object."""

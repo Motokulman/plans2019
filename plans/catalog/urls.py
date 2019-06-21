@@ -38,9 +38,12 @@ urlpatterns += [
     path('add_aperture/', views.add_aperture, name='add_aperture'),
     path('get_apertures/', views.get_apertures, name='get_apertures'),
     path('add_point/', views.add_point, name='add_point'),
+    path('add_lined_grillage_point/', views.add_lined_grillage_point, name='add_lined_grillage_point'),
     path('get_points/', views.get_points, name='get_points'),
     path('set_point/', views.set_point, name='set_point'),
     path('add_grillage/', views.add_grillage, name='add_grillage'),
+    path('add_lined_grillage/', views.add_lined_grillage, name='add_lined_grillage'),
     path('get_grillages/', views.get_grillages, name='get_grillages'),
+    path('get_lined_grillages/', views.get_lined_grillages, name='get_lined_grillages'),
 
 ]
