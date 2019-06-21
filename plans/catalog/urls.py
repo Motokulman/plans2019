@@ -31,6 +31,7 @@ urlpatterns += [
     path('add_level/', views.add_level, name='add_level'),
     path('set_floor/', views.set_floor, name='set_floor'),
     path('set_plate/', views.set_plate, name='set_plate'),
+    path('set_plate_point/', views.set_plate_point, name='set_plate_point'),
     path('add_plate/', views.add_plate, name='add_plate'),
     path('add_plate_point/', views.add_plate_point, name='add_plate_point'),
     path('get_plates/', views.get_plates, name='get_plates'),

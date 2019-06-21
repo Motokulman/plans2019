@@ -32,7 +32,7 @@ class PlanDetailView(generic.DetailView):
 class PlanCreate(CreateView):
     model = Plan
     fields = '__all__'
-    initial = {'title': 'New plan', 'scale': '1.0'}
+    initial = {'title': 'New plan', 'scale': '2.0'}
 
 
 class PlanDelete(DeleteView):
@@ -191,6 +191,18 @@ def set_plate(request):
     e.title = data.get("title")
     e.floor = data.get("floor")
     e.plateType = data.get("plateType")
+    e.save()
+
+    return JsonResponse(return_dict)
+
+
+def set_plate_point(request):
+    """"""
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(PlatePoint, pk=data.get("pk"))
+    e.x = data.get("x")
+    e.y = data.get("y")
     e.save()
 
     return JsonResponse(return_dict)
