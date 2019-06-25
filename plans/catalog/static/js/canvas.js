@@ -53,6 +53,12 @@ var color;
 var plateType;
 var stickPixels = 3;
 
+// layers active
+var floor_1_lay = false;
+var floor_2_lay = false;
+var floor_3_lay = false;
+var roof_lay = false;
+
 
 ctx.lineCap = 'square';
 
@@ -338,6 +344,7 @@ $(document).ready(function () {
   getPlates();
   defineSelectedPlateType();
   getApertures();
+  defineSelectedFloorLayer();
 });
 
 
@@ -938,6 +945,10 @@ plate_type_form.addEventListener('change', function (evt) {
   plateType = event.target.value;
 })
 
+floors_layes_form.addEventListener('change', function (evt) {
+  defineSelectedFloorLayer();
+})
+
 
 // floor_form.addEventListener('change', function (evt) {
 //   console.log("event.target.value = ", event.target.value);
@@ -1247,6 +1258,21 @@ function defineSelectedPlateType() {
   }
 }
 
+// function defineSelectedFloorLayer() {
+//      if ($("#1_floor_checkbox")[0].checked) {
+//       floor_1_lay = true;
+//     }  
+//       if ($("#2_floor_checkbox")[0].checked) {
+//       floor_2_lay = true;
+//     }
+//     if ($("#3_floor_checkbox")[0].checked) {
+//       floor_3_lay = true;
+//     }
+//     if ($("#roof_checkbox")[0].checked) {
+//       roof_lay = true;
+//     }
+// }
+
 // define distance between two points
 // function twoPointsDist(x0, y0, x1, y1) {
 //   var dist = Math.sqrt(Math.pow((x0 - x1), 2) + Math.pow((y0 - y1), 2));
@@ -1280,3 +1306,16 @@ function defUnderMouseElement() {
     }
   }
 }
+
+canvas.addEventListener("wheel", function(e) {
+  if (selectedTool == "scaling") {
+
+    scale = (parseFloat(scale) + parseFloat(e.deltaY/1000)).toFixed(1);
+    console.log("scale = ", scale);
+    if (scale < 1) {
+      scale = 1;
+    }
+  }
+  aperturesDraw();
+
+});
