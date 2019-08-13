@@ -63,8 +63,8 @@ var roof_lay = false;
 ctx.lineCap = 'square';
 
 // drawing existed elements. 
-function drawExisted(data, paddingX, paddingY) {
-  for (item of data.values()) {
+function drawExisted() {
+  for (item of existedElements.values()) {
     ctx.lineWidth = elementLineWidth;
     ctx.beginPath();
     ctx.moveTo(item.fields.x0/scale + paddingX, item.fields.y0/scale + paddingY);
@@ -72,7 +72,7 @@ function drawExisted(data, paddingX, paddingY) {
     ctx.stroke();
 
   }
-  // console.log("allPlatesDraw = ");
+  
   allPlatesDraw();
 
 }
@@ -353,7 +353,7 @@ document.addEventListener('getElements', function (e) {
   console.log("getElements event ");
   if ((plan[0].fields.paddingX != null) && (plan[0].fields.paddingY != null)) {
     //clear();
-    drawExisted(existedElements, paddingX, paddingY);
+    drawExisted();
   }
 }, false);
 
@@ -516,35 +516,35 @@ canvas.addEventListener('mousemove', function (e) {
     if (running) {
       clear();
       sticking(canvas, e, existedElements);
-      drawExisted(existedElements, paddingX, paddingY);
+      drawExisted();
       elementLine.draw();
     } else {
       clear();
       sticking(canvas, e, existedElements);
-      drawExisted(existedElements, paddingX, paddingY);
+      drawExisted();
     }
   }
   if (selectedTool == "rounded_wall") {
     if (roundedWallSetStage == 1) {
       clear();
       sticking(canvas, e, existedElements);
-      drawExisted(existedElements, paddingX, paddingY);
+      drawExisted();
       elementLine.draw();
     } else if (roundedWallSetStage == 2) {
       clear();
       sticking(canvas, e, existedElements);
-      drawExisted(existedElements, paddingX, paddingY);
+      drawExisted();
       circleLine.draw();
     } else {
       clear();
       sticking(canvas, e, existedElements);
-      drawExisted(existedElements, paddingX, paddingY);
+      drawExisted();
     }
   }
   if (selectedTool == "plate") {
     clear();
     sticking(canvas, e, existedElements);
-    drawExisted(existedElements, paddingX, paddingY);
+    drawExisted();
     for (var i = 0; i < mousePosArray.length; i++) {
       point.draw(mousePosArray[i].x, mousePosArray[i].y, 5, color);
     }
@@ -552,7 +552,7 @@ canvas.addEventListener('mousemove', function (e) {
   if (selectedTool == "aperture") {
     clear();
     sticking(canvas, e, existedElements);
-    drawExisted(existedElements, paddingX, paddingY);
+    drawExisted();
     aperturesDraw();
     //console.log("aperture");
     var a = defUnderMouseElement();
@@ -564,6 +564,9 @@ canvas.addEventListener('mousemove', function (e) {
 
 
 });
+
+
+
 
 // clicking handler
 canvas.addEventListener('click', function (e) {
@@ -937,17 +940,16 @@ $('#selector button').click(function () {
   //console.log("selectedTool = ", selectedTool);
 });
 
+
 wall_type_form.addEventListener('change', function (evt) {
   wallType = event.target.value;
-})
+});
 
-plate_type_form.addEventListener('change', function (evt) {
-  plateType = event.target.value;
-})
 
-floors_layes_form.addEventListener('change', function (evt) {
-  defineSelectedFloorLayer();
-})
+
+
+
+
 
 
 // floor_form.addEventListener('change', function (evt) {
@@ -1024,6 +1026,7 @@ function addInputFieldsBetweenAxisesY(yAxisesArray) {
   }
 }
 
+
 // adding input fields between X axises
 function addInputFieldsBetweenAxisesX(xAxisesArray) {
   for (var i = 1; i < xAxisesArray.length; i++) {
@@ -1095,8 +1098,6 @@ function addInputFieldsBetweenAxisesX(xAxisesArray) {
     });
   }
 }
-
-
 
 function addFloorInput(inputField, item, id) {
   var selectFloorField = document.createElement("input");
@@ -1190,14 +1191,18 @@ function addFloorInputTable() {
 
 
 document.addEventListener('getFloors', function (e) {
+  console.log("getFloors event");
   floorInputFieldUpdate();
 }, false);
 
 
 document.addEventListener('getApertures', function (e) {
-  console.log("getApertures event")
+  console.log("getApertures event");
   aperturesDraw();
-}, false);
+}, false);  
+
+
+
 
 
 $('#add').click(function () {
@@ -1307,15 +1312,22 @@ function defUnderMouseElement() {
   }
 }
 
-canvas.addEventListener("wheel", function(e) {
+window.addEventListener("wheel", function(e) {
   if (selectedTool == "scaling") {
 
-    scale = (parseFloat(scale) + parseFloat(e.deltaY/1000)).toFixed(1);
-    console.log("scale = ", scale);
-    if (scale < 1) {
-      scale = 1;
-    }
+  scale = (parseFloat(scale) + parseFloat(e.deltaY/1000)).toFixed(1);
+  console.log("scale = ", scale);
+  if (scale < 1) {
+    scale = 1;
   }
-  aperturesDraw();
+}
+drawAll();
 
 });
+
+function drawAll() {
+  clear();
+  drawExisted();
+  aperturesDraw();
+
+}

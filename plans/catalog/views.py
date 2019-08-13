@@ -114,6 +114,16 @@ def set_plan_paddingY(request):
 
     return JsonResponse(return_dict)
 
+def set_plan_scale(request):
+    """View function for edit plan info"""
+    return_dict = dict()
+    data = request.POST
+    e = get_object_or_404(Plan, pk=data.get("plan"))
+    e.scale = data.get("scale")
+    e.save()
+
+    return JsonResponse(return_dict)
+
 
 def set_element_x(request):
     """View function for change single x coords of element (line) of the scheme of the specific plan"""
