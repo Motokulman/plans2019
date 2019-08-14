@@ -32,7 +32,7 @@ class PlanDetailView(generic.DetailView):
 class PlanCreate(CreateView):
     model = Plan
     fields = '__all__'
-    initial = {'title': 'New plan', 'scale': '2.0'}
+    initial = {'title': 'New plan', 'scale': '20.0'}
 
 
 class PlanDelete(DeleteView):

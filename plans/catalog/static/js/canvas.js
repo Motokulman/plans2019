@@ -8,6 +8,7 @@ var scale;
 var existedElements;
 var floors;
 var plates;
+var action;
 var apertures;
 var plateId;
 var last_plate; // when draw new plate, first added new plate and then points of this plate. You need to know last added plate for adding points of this new plate
@@ -24,6 +25,8 @@ var plan_id = document.getElementById('canvas_form').name;
 var csrf_token = $('#canvas_form [name="csrfmiddlewaretoken"]').val();
 var paddingX;
 var paddingY;
+var oldPaddingX;
+var oldPaddingY;
 var canvasDiv = document.getElementById("canvas_form");
 var editDiv = document.getElementById("edit-field");
 // var topEditField = document.getElementById("top-edit-field");
@@ -42,6 +45,11 @@ var wallType = "a_type";
 var floorId;
 var mousePosArray = [];
 var allPlatesPointsArray = [];
+var xAxisesArray;
+var yAxisesArray;
+var mouseDownCoords;
+var mouseDown = false;
+var wasScale = false;
 
 // settings for size inputs
 var sizeInputWidth = 60;
@@ -60,6 +68,7 @@ var floor_3_lay = false;
 var roof_lay = false;
 
 
+
 ctx.lineCap = 'square';
 
 // drawing existed elements. 
@@ -67,14 +76,11 @@ function drawExisted() {
   for (item of existedElements.values()) {
     ctx.lineWidth = elementLineWidth;
     ctx.beginPath();
-    ctx.moveTo(item.fields.x0/scale + paddingX, item.fields.y0/scale + paddingY);
-    ctx.lineTo(item.fields.x1/scale + paddingX, item.fields.y1/scale + paddingY);
+    ctx.moveTo(item.fields.x0 / scale + paddingX, item.fields.y0 / scale + paddingY);
+    ctx.lineTo(item.fields.x1 / scale + paddingX, item.fields.y1 / scale + paddingY);
     ctx.stroke();
-
   }
-  
-  allPlatesDraw();
-
+ // allPlatesDraw();
 }
 
 // get existing elements from DB
@@ -108,8 +114,8 @@ function getElements() {
         //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
       }
       //transform sets to arrays for sorting
-      var xAxisesArray = Array.from(xAxisesSet);
-      var yAxisesArray = Array.from(yAxisesSet);
+      xAxisesArray = Array.from(xAxisesSet);
+      yAxisesArray = Array.from(yAxisesSet);
       //sorting arrays
       //first, function for comparing
       function compareNumeric(a, b) {
@@ -120,8 +126,8 @@ function getElements() {
       yAxisesArray.sort(compareNumeric);
       xAxisesArray.sort(compareNumeric);
 
-      addInputFieldsBetweenAxisesY(yAxisesArray);
-      addInputFieldsBetweenAxisesX(xAxisesArray);
+      addInputFieldsBetweenAxisesY();
+      addInputFieldsBetweenAxisesX();
     },
     error: function () {
       console.log("Getting stored elements error");
@@ -245,8 +251,8 @@ function aperturesDraw() {
         // console.log("совпало = ", existedElements[j].pk);
         // console.log("existedElements[j].fields.x0 = ", existedElements[j].fields.x0);
 
-        x = paddingX + (Math.min(existedElements[j].fields.x0, existedElements[j].fields.x1) + Math.abs(existedElements[j].fields.x0 - existedElements[j].fields.x1) * apertures[i].fields.center)/scale;
-        y = paddingY + (Math.min(existedElements[j].fields.y0, existedElements[j].fields.y1) + Math.abs(existedElements[j].fields.y0 - existedElements[j].fields.y1) * apertures[i].fields.center)/scale;
+        x = paddingX + (Math.min(existedElements[j].fields.x0, existedElements[j].fields.x1) + Math.abs(existedElements[j].fields.x0 - existedElements[j].fields.x1) * apertures[i].fields.center) / scale;
+        y = paddingY + (Math.min(existedElements[j].fields.y0, existedElements[j].fields.y1) + Math.abs(existedElements[j].fields.y0 - existedElements[j].fields.y1) * apertures[i].fields.center) / scale;
         if (apertures[i].fields.filling == "empty") {
           aperture.draw_empty(x, y);
         } else if (apertures[i].fields.filling == "window") {
@@ -377,8 +383,8 @@ document.addEventListener('getPlates', function (e) {
     for (var i = 0; i < mousePosArray.length; i++) { // if the new plate was added and we have an array of plate's points, let's add it
       data = {};
       data.plate = last_plate.pk;
-      data.x = (mousePosArray[i].x - paddingX)*scale;
-      data.y = (mousePosArray[i].y - paddingY)*scale;
+      data.x = (mousePosArray[i].x - paddingX) * scale;
+      data.y = (mousePosArray[i].y - paddingY) * scale;
       data["csrfmiddlewaretoken"] = csrf_token;
       var url = '/catalog/add_plate_point/';
       ajaxPostPlatePoint(data, url, "add new plate point");
@@ -474,10 +480,10 @@ var polygon = {
     ctx.globalAlpha = 0.2;
     ctx.fillStyle = c;
     ctx.beginPath();
-    ctx.moveTo(arr[0].fields.x/scale + paddingX, arr[0].fields.y/scale + paddingY);
+    ctx.moveTo(arr[0].fields.x / scale + paddingX, arr[0].fields.y / scale + paddingY);
 
     for (var i = 1; i < arr.length; i++) {
-      ctx.lineTo(arr[i].fields.x/scale + paddingX, arr[i].fields.y/scale + paddingY);
+      ctx.lineTo(arr[i].fields.x / scale + paddingX, arr[i].fields.y / scale + paddingY);
       // console.log("arr[i].fields.x = ", arr[i].fields.x);
       ctx.stroke();
     }
@@ -561,8 +567,16 @@ canvas.addEventListener('mousemove', function (e) {
       point.draw(mousePos.x, mousePos.y, 5, "#2F4F4F");
     }
   }
-
-
+  if (selectedTool == "move") {
+    if (mouseDown) {
+      sticking(canvas, e, existedElements);
+      //  console.log("mouseDownCoords.x = ", mousePos);
+      //var xMove = mouseDownCoords.x - mousePos.x;
+      paddingX = oldPaddingX - mouseDownCoords.x + mousePos.x;
+      paddingY = oldPaddingY + mousePos.y - mouseDownCoords.y;
+      drawAll();
+    }
+  }
 });
 
 
@@ -585,18 +599,18 @@ canvas.addEventListener('click', function (e) {
 
         // post first coords
         if (mousePos.x > mouseOldPos0.x) {
-          data.x1 = (mousePos.x - mouseOldPos0.x)*scale;
+          data.x1 = (mousePos.x - mouseOldPos0.x) * scale;
           data.x0 = 0;
         } else {
-          data.x0 = (mouseOldPos0.x - mousePos.x)*scale;
+          data.x0 = (mouseOldPos0.x - mousePos.x) * scale;
           data.x1 = 0;
         }
         if (mousePos.y > mouseOldPos0.y) {
           data.y0 = 0;
-          data.y1 = (mousePos.y - mouseOldPos0.y)*scale;
+          data.y1 = (mousePos.y - mouseOldPos0.y) * scale;
         } else {
           data.y1 = 0;
-          data.y0 = (mouseOldPos0.y - mousePos.y)*scale;
+          data.y0 = (mouseOldPos0.y - mousePos.y) * scale;
         }
 
         data.plan = plan_id;
@@ -617,7 +631,7 @@ canvas.addEventListener('click', function (e) {
       } else {
         // check if new line getting smaller paddings
         if (paddingX > Math.min(mousePos.x, mouseOldPos0.x)) {
-          var delta = (paddingX - Math.min(mousePos.x, mouseOldPos0.x))*scale;
+          var delta = parseInt((paddingX - Math.min(mousePos.x, mouseOldPos0.x)) * scale);
           paddingX = Math.min(mousePos.x, mouseOldPos0.x);
           data["csrfmiddlewaretoken"] = csrf_token;
 
@@ -627,6 +641,7 @@ canvas.addEventListener('click', function (e) {
             data.pk = existedElements[i].pk;
             data.x0 = existedElements[i].fields.x0 + delta;
             data.x1 = existedElements[i].fields.x1 + delta;
+            console.log("data = ", data);
             ajaxPostElement(data, url, "change x coords");
           }
 
@@ -635,7 +650,7 @@ canvas.addEventListener('click', function (e) {
             for (var j = 0; j < allPlatesPointsArray[i].length; j++) {
 
               data.pk = allPlatesPointsArray[i][j].pk;
-            //  data["csrfmiddlewaretoken"] = csrf_token;
+              //  data["csrfmiddlewaretoken"] = csrf_token;
               data.x = allPlatesPointsArray[i][j].fields.x + delta;
               data.y = allPlatesPointsArray[i][j].fields.y;
               var url = '/catalog/set_plate_point/';
@@ -653,7 +668,7 @@ canvas.addEventListener('click', function (e) {
           ajaxPostPlan(dataPlan, url, "set new paddingX");
         }
         if (paddingY > Math.min(mousePos.y, mouseOldPos0.y)) {
-          var delta = (paddingY - Math.min(mousePos.y, mouseOldPos0.y))*scale;
+          var delta = parseInt((paddingY - Math.min(mousePos.y, mouseOldPos0.y)) * scale);
           paddingY = Math.min(mousePos.y, mouseOldPos0.y);
           data["csrfmiddlewaretoken"] = csrf_token;
           var url = '/catalog/set_element_y/';
@@ -669,7 +684,7 @@ canvas.addEventListener('click', function (e) {
             for (var j = 0; j < allPlatesPointsArray[i].length; j++) {
 
               data.pk = allPlatesPointsArray[i][j].pk;
-            //  data["csrfmiddlewaretoken"] = csrf_token;
+              //  data["csrfmiddlewaretoken"] = csrf_token;
               data.y = allPlatesPointsArray[i][j].fields.y + delta;
               data.x = allPlatesPointsArray[i][j].fields.x;
               var url = '/catalog/set_plate_point/';
@@ -686,14 +701,15 @@ canvas.addEventListener('click', function (e) {
           dataPlan.paddingY = paddingY;
           ajaxPostPlan(dataPlan, url, "set new paddingY");
         }
-        data.x0 = (mouseOldPos0.x - paddingX)*scale;
-        data.y0 = (mouseOldPos0.y - paddingY)*scale;
-        data.x1 = (mousePos.x - paddingX)*scale;
-        data.y1 = (mousePos.y - paddingY)*scale;
+        data.x0 = parseInt((mouseOldPos0.x - paddingX) * scale);
+        data.y0 = parseInt((mouseOldPos0.y - paddingY) * scale);
+        data.x1 = parseInt((mousePos.x - paddingX) * scale);
+        data.y1 = parseInt((mousePos.y - paddingY) * scale);
         data.wallType = wallType;
         data.plan = plan_id;
         data["csrfmiddlewaretoken"] = csrf_token;
         var url = '/catalog/add_element/';
+        console.log("data = ", data);
         ajaxPostElement(data, url, "add new element");
       }
 
@@ -743,13 +759,13 @@ canvas.addEventListener('click', function (e) {
   }
 
   if (selectedTool == "aperture") {
-   // console.log("modal = ", selectedTool);
+    // console.log("modal = ", selectedTool);
     selectedElement = defUnderMouseElement();
     // var elementData = {};
 
 
     if (selectedElement) {
-       console.log("selectedElement = ", selectedElement);
+      console.log("selectedElement = ", selectedElement);
       point.draw(mousePos.x, mousePos.y, 5, "#2F4F4F");
       var modal = document.querySelector("#apertureModal");
       //console.log("modal = ", modal);
@@ -896,18 +912,18 @@ function sticking(canvas, e, data) {
   }
   // Sticking to other points
   for (item of existedElements.values()) {
-    if (Math.abs(mousePos.x - item.fields.x0/scale - paddingX) <= stickPixels) {
-      mousePos.x = item.fields.x0/scale + paddingX;
+    if (Math.abs(mousePos.x - item.fields.x0 / scale - paddingX) <= stickPixels) {
+      mousePos.x = item.fields.x0 / scale + paddingX;
       flagX = true;
-    } else if (Math.abs(mousePos.x - item.fields.x1/scale - paddingX) <= stickPixels) {
-      mousePos.x = item.fields.x1/scale + paddingX;
+    } else if (Math.abs(mousePos.x - item.fields.x1 / scale - paddingX) <= stickPixels) {
+      mousePos.x = item.fields.x1 / scale + paddingX;
       flagX = true;
     }
-    if (Math.abs(mousePos.y - item.fields.y0/scale - paddingY) <= stickPixels) {
-      mousePos.y = item.fields.y0/scale + paddingY;
+    if (Math.abs(mousePos.y - item.fields.y0 / scale - paddingY) <= stickPixels) {
+      mousePos.y = item.fields.y0 / scale + paddingY;
       flagY = true;
-    } else if (Math.abs(mousePos.y - item.fields.y1/scale - paddingY) <= stickPixels) {
-      mousePos.y = item.fields.y1/scale + paddingY;
+    } else if (Math.abs(mousePos.y - item.fields.y1 / scale - paddingY) <= stickPixels) {
+      mousePos.y = item.fields.y1 / scale + paddingY;
       flagY = true;
     }
   }
@@ -957,14 +973,15 @@ wall_type_form.addEventListener('change', function (evt) {
 // })
 
 // *********************************************************************************************adding input fields between Y axises
-function addInputFieldsBetweenAxisesY(yAxisesArray) {
+function addInputFieldsBetweenAxisesY() {
   for (var i = 1; i < yAxisesArray.length; i++) {
     var size = yAxisesArray[i] - yAxisesArray[i - 1];
-    addSizeInput(paddingY + yAxisesArray[i - 1]/scale + (size / 2)/scale - sizeInputHeight / 2 - (i - 1) * (sizeInputHeight + 4), 10, leftEditField, "left" + String(i - 1), size);  // Y between
+    addSizeInput(paddingY + yAxisesArray[i - 1] / scale + (size / 2) / scale - sizeInputHeight / 2 - (i - 1) * (sizeInputHeight + 4), 10, leftEditField, "left" + String(i - 1), size);  // Y between
     //set the event listener for changing size
     var currentInput = document.getElementById("left" + String(i - 1));
     currentInput.addEventListener("focus", function (e) {
       sizeOld = this.value;
+      action = "change_y_size";
     });
     currentInput.addEventListener("blur", function (e) {
       if ((this.value <= 0) || (this.value > 99999)) { // введено не число
@@ -995,7 +1012,6 @@ function addInputFieldsBetweenAxisesY(yAxisesArray) {
             if (flag) {
               var url = '/catalog/set_element_y/';
               ajaxPostElement(data, url, "change y coords aftes size changing");
-
             }
           }
 
@@ -1028,10 +1044,10 @@ function addInputFieldsBetweenAxisesY(yAxisesArray) {
 
 
 // adding input fields between X axises
-function addInputFieldsBetweenAxisesX(xAxisesArray) {
+function addInputFieldsBetweenAxisesX() {
   for (var i = 1; i < xAxisesArray.length; i++) {
     var size = xAxisesArray[i] - xAxisesArray[i - 1];
-    addSizeInput(10, paddingX + xAxisesArray[i - 1]/scale + (size / 2)/scale - sizeInputWidth / 2 - (i - 1) * (sizeInputWidth + 4) + document.getElementById("left-edit-field").offsetWidth + 30, bottomEditField, "bottom" + String(i - 1), size);  // X between
+    addSizeInput(10, paddingX + xAxisesArray[i - 1] / scale + (size / 2) / scale - sizeInputWidth / 2 - (i - 1) * (sizeInputWidth + 4) + document.getElementById("left-edit-field").offsetWidth + 30, bottomEditField, "bottom" + String(i - 1), size);  // X between
     //set the event listener for changing size
     var currentInput = document.getElementById("bottom" + String(i - 1));
     currentInput.addEventListener("focus", function (e) {
@@ -1199,7 +1215,7 @@ document.addEventListener('getFloors', function (e) {
 document.addEventListener('getApertures', function (e) {
   console.log("getApertures event");
   aperturesDraw();
-}, false);  
+}, false);
 
 
 
@@ -1214,9 +1230,9 @@ $('#aperture_form_submit').click(function () {
   var center;
   for (item of existedElements.values()) {
     if (item.pk == selectedElement) {
-      center = (mousePos.x*scale - Math.min(item.fields.x0, item.fields.x1)/scale - paddingX*scale) / Math.abs(item.fields.x0 - item.fields.x1);
+      center = (mousePos.x * scale - Math.min(item.fields.x0, item.fields.x1) / scale - paddingX * scale) / Math.abs(item.fields.x0 - item.fields.x1);
       if (!center) {
-        center = (mousePos.y*scale - Math.min(item.fields.y0, item.fields.y1)/scale - paddingY*scale) / Math.abs(item.fields.y0 - item.fields.y1);
+        center = (mousePos.y * scale - Math.min(item.fields.y0, item.fields.y1) / scale - paddingY * scale) / Math.abs(item.fields.y0 - item.fields.y1);
       }
 
       console.log("center = ", center);
@@ -1286,8 +1302,8 @@ function defineSelectedPlateType() {
 
 // define is the point on the line
 function twoPointsDist(x, y, x0, y0, x1, y1) {
-  x = (x - paddingX)*scale;
-  y = (y - paddingY)*scale;
+  x = (x - paddingX) * scale;
+  y = (y - paddingY) * scale;
   //console.log("x = ", x);
   var dist = Math.sqrt(Math.pow((x0 - x1), 2) + Math.pow((y0 - y1), 2));
   var dist1 = Math.sqrt(Math.pow((x - x0), 2) + Math.pow((y - y0), 2));
@@ -1303,31 +1319,110 @@ function twoPointsDist(x, y, x0, y0, x1, y1) {
 
 function defUnderMouseElement() {
   for (item of existedElements.values()) {
-  //  console.log("defUnderMouseElement = ");
+    //  console.log("defUnderMouseElement = ");
     if (twoPointsDist(mousePos.x, mousePos.y, item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)) {
-       console.log("item = ", item);
+      console.log("item = ", item);
       //    console.log("twoPointsDist = ", twoPointsDist(item.fields.x0, item.fields.y0, item.fields.x1, item.fields.y1)); 
       return item.pk;
     }
   }
 }
 
-window.addEventListener("wheel", function(e) {
-  if (selectedTool == "scaling") {
-
-  scale = (parseFloat(scale) + parseFloat(e.deltaY/1000)).toFixed(1);
-  console.log("scale = ", scale);
-  if (scale < 1) {
-    scale = 1;
+canvas.addEventListener("wheel", function (e) {
+  if (wasScale) {
+    scale = (parseFloat(scale) + parseFloat(e.deltaY / 100)).toFixed(1);
+    console.log("scale = ", scale);
+    drawAll();
   }
-}
-drawAll();
-
 });
+
+canvas.addEventListener("mousedown", function (e) {
+  mouseDown = true;
+  oldPaddingX = paddingX;
+  oldPaddingY = paddingY;
+  sticking(canvas, e, existedElements);
+  mouseDownCoords = mousePos;
+});
+
+window.addEventListener("mouseup", function (e) {
+  if (mouseDown) {
+    if (oldPaddingX != paddingX) {
+      console.log("oldPaddingX  = ", oldPaddingX);
+      console.log("paddingX  = ", paddingX);
+      dataPlan.plan = plan_id;
+      dataPlan["csrfmiddlewaretoken"] = csrf_token;
+      var url = '/catalog/set_plan_paddingX/';
+      dataPlan.paddingX = parseInt(paddingX);
+      ajaxPostPlan(dataPlan, url, "set new paddingX after move");
+    }
+    if (oldPaddingY != paddingY) {
+      dataPlan.plan = plan_id;
+      dataPlan["csrfmiddlewaretoken"] = csrf_token;
+      var url = '/catalog/set_plan_paddingY/';
+      dataPlan.paddingY = parseInt(paddingY);
+      console.log("dataPlan  = ", dataPlan);
+      ajaxPostPlan(dataPlan, url, "set new paddingY after move");
+    }
+  }
+  mouseDown = false;
+});
+
+document.addEventListener('keyup', function (event) {
+  if (event.keyCode == 16) {
+    if (wasScale) {
+      wasScale = false;
+      dataPlan.plan = plan_id;
+      dataPlan["csrfmiddlewaretoken"] = csrf_token;
+      url = '/catalog/set_plan_scale/';
+      dataPlan.scale = scale;
+      ajaxPostPlan(dataPlan, url, "set new scale");
+      console.log("saved scale = ", dataPlan.scale);
+    }
+  }
+});
+
+document.addEventListener('keydown', function (event) {
+  //  alert('event.keyCode! = ' + event.keyCode);
+  if (event.keyCode == 16) {
+    wasScale = true;
+  }
+  if (event.keyCode == 13) {
+  }
+});
+
 
 function drawAll() {
   clear();
   drawExisted();
   aperturesDraw();
-
+  yInputFieldMove();
+  xInputFieldMove();
 }
+
+// move input field when scaling
+function yInputFieldMove() {
+  for (var i = 1; i < yAxisesArray.length; i++) {
+    var size = yAxisesArray[i] - yAxisesArray[i - 1];
+    var top = paddingY + yAxisesArray[i - 1] / scale + (size / 2) / scale - sizeInputHeight / 2 - (i - 1) * (sizeInputHeight + 4);
+    var left = 10;
+    var currentInput = document.getElementById("left" + String(i - 1));
+    top = String(top) + "px";
+    left = String(left) + "px";
+    currentInput.style.top = top;
+    currentInput.style.left = left;
+  }
+}
+
+function xInputFieldMove() {
+  for (var i = 1; i < xAxisesArray.length; i++) {
+    var size = xAxisesArray[i] - xAxisesArray[i - 1];
+    var top = 10;
+    var left = paddingX + xAxisesArray[i - 1] / scale + (size / 2) / scale - sizeInputWidth / 2 - (i - 1) * (sizeInputWidth + 4) + document.getElementById("left-edit-field").offsetWidth + 30;
+    var currentInput = document.getElementById("bottom" + String(i - 1));
+    top = String(top) + "px";
+    left = String(left) + "px";
+    currentInput.style.top = top;
+    currentInput.style.left = left;
+  }
+}
+
