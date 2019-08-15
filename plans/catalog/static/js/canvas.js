@@ -80,7 +80,7 @@ function drawExisted() {
     ctx.lineTo(item.fields.x1 / scale + paddingX, item.fields.y1 / scale + paddingY);
     ctx.stroke();
   }
- // allPlatesDraw();
+  // allPlatesDraw();
 }
 
 // get existing elements from DB
@@ -147,6 +147,7 @@ function getApertures() {
     cache: true,
     //async: false,
     success: function (data) {
+      console.log(" getApertures data = ", data);
       apertures = JSON.parse(data);
       console.log("OK Getting stored apertures");
       console.log("apertures = ", apertures);
@@ -984,7 +985,7 @@ function addInputFieldsBetweenAxisesY() {
       action = "change_y_size";
     });
     currentInput.addEventListener("blur", function (e) {
-      if ((this.value <= 0) || (this.value > 99999)) { // введено не число
+      if ((this.value < 0) || (this.value > 99999)) { // введено не число
         this.focus(); //Введено неправильное значение ... и вернуть фокус обратно 
       } else if (sizeOld != this.value) { // if size was really changed
         var delta = this.value - sizeOld;
@@ -1054,7 +1055,7 @@ function addInputFieldsBetweenAxisesX() {
       sizeOld = this.value;
     });
     currentInput.addEventListener("blur", function (e) {
-      if ((this.value <= 0) || (this.value > 99999)) { // введено не число
+      if ((this.value < 0) || (this.value > 99999)) { // введено не число
         this.focus(); //Введено неправильное значение ... и вернуть фокус обратно 
       } else if (sizeOld != this.value) { // if size was really changed
         var delta = this.value - sizeOld;
@@ -1230,11 +1231,11 @@ $('#aperture_form_submit').click(function () {
   var center;
   for (item of existedElements.values()) {
     if (item.pk == selectedElement) {
-      center = (mousePos.x * scale - Math.min(item.fields.x0, item.fields.x1) / scale - paddingX * scale) / Math.abs(item.fields.x0 - item.fields.x1);
-      if (!center) {
+      if (item.fields.x0 != item.fields.x1) {
+        center = (mousePos.x * scale - Math.min(item.fields.x0, item.fields.x1) / scale - paddingX * scale) / Math.abs(item.fields.x0 - item.fields.x1);
+      } else {
         center = (mousePos.y * scale - Math.min(item.fields.y0, item.fields.y1) / scale - paddingY * scale) / Math.abs(item.fields.y0 - item.fields.y1);
       }
-
       console.log("center = ", center);
     }
   }
